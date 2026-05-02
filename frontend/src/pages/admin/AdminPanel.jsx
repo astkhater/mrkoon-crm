@@ -7,11 +7,11 @@ const ROLE_OPTIONS = ['cco','ceo','coo','bd_tl','bd_rep','bd_am']
 const ROLE_LABELS  = { cco:'CCO', ceo:'CEO', coo:'COO', bd_tl:'BD Team Lead', bd_rep:'BD Rep', bd_am:'Account Manager' }
 
 const SOURCE_CARDS = [
-  { id:'erp',     label:'ERP Connector',   icon:'🔗', status:'dormant', desc:'Internal ERP — activate with credentials' },
-  { id:'meta',    label:'Meta Ads',         icon:'📘', status:'planned', desc:'Lead source from Meta (Facebook/Instagram) campaigns' },
-  { id:'linkedin',label:'LinkedIn Ads',     icon:'💼', status:'planned', desc:'Lead source from LinkedIn campaign manager' },
-  { id:'google',  label:'Google Ads',       icon:'🔍', status:'planned', desc:'Lead source from Google Ads' },
-  { id:'import',  label:'Manual Import',    icon:'📤', status:'active',  desc:'CSV import — currently active on /import page' },
+  { id:'erp',     label:'ERP Connector',   icon:'\u{1F517}', status:'dormant', desc:'Internal ERP — activate with credentials' },
+  { id:'meta',    label:'Meta Ads',         icon:'\u{1F4D8}', status:'planned', desc:'Lead source from Meta (Facebook/Instagram) campaigns' },
+  { id:'linkedin',label:'LinkedIn Ads',     icon:'\u{1F4BC}', status:'planned', desc:'Lead source from LinkedIn campaign manager' },
+  { id:'google',  label:'Google Ads',       icon:'\u{1F50D}', status:'planned', desc:'Lead source from Google Ads' },
+  { id:'import',  label:'Manual Import',    icon:'\u{1F4E4}', status:'active',  desc:'CSV import — currently active on /import page' },
 ]
 
 const ACTION_COLORS = {
@@ -107,7 +107,6 @@ export default function AdminPanel() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div style={{ display:'flex', gap:'8px', marginBottom:'24px', borderBottom:'1px solid var(--border)', paddingBottom:'0' }}>
         {tabs.map(t => (
           <button
@@ -127,7 +126,6 @@ export default function AdminPanel() {
         ))}
       </div>
 
-      {/* ── USERS TAB ── */}
       {tab === 'users' && (
         <div className="crm-card" style={{ padding:0, overflow:'hidden' }}>
           <div style={{ padding:'16px 20px', borderBottom:'1px solid var(--border)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
@@ -152,35 +150,15 @@ export default function AdminPanel() {
                   <tr key={u.id} style={{ borderBottom:'1px solid var(--border)' }}>
                     <td style={{ padding:'12px 16px', color:'var(--text-primary)', fontWeight:600 }}>{u.full_name}</td>
                     <td style={{ padding:'12px 16px' }}>
-                      <select
-                        value={u.role}
-                        onChange={e => updateRole(u.id, e.target.value)}
-                        disabled={saving === u.id}
-                        className="crm-input"
-                        style={{ width:'auto', minWidth:'160px', padding:'4px 8px', fontSize:'12px' }}
-                      >
-                        {ROLE_OPTIONS.map(r => (
-                          <option key={r} value={r}>{ROLE_LABELS[r]}</option>
-                        ))}
+                      <select value={u.role} onChange={e => updateRole(u.id, e.target.value)} disabled={saving === u.id} className="crm-input" style={{ width:'auto', minWidth:'160px', padding:'4px 8px', fontSize:'12px' }}>
+                        {ROLE_OPTIONS.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
                       </select>
                     </td>
                     <td style={{ padding:'12px 16px' }}>
-                      <button
-                        onClick={() => toggleAdmin(u.id, u.is_admin)}
-                        disabled={saving === u.id}
-                        style={{
-                          width:'32px', height:'20px', borderRadius:'10px', border:'none', cursor:'pointer',
-                          background: u.is_admin ? 'var(--brand-green)' : 'var(--border)',
-                          position:'relative', transition:'background .2s',
-                        }}
-                        title={u.is_admin ? 'Remove admin' : 'Grant admin'}
-                      >
-                        <span style={{
-                          position:'absolute', top:'2px',
-                          left: u.is_admin ? '14px' : '2px',
-                          width:'16px', height:'16px', borderRadius:'50%',
-                          background:'#fff', transition:'left .2s', display:'block',
-                        }} />
+                      <button onClick={() => toggleAdmin(u.id, u.is_admin)} disabled={saving === u.id}
+                        style={{ width:'32px', height:'20px', borderRadius:'10px', border:'none', cursor:'pointer', background: u.is_admin ? 'var(--brand-green)' : 'var(--border)', position:'relative', transition:'background .2s' }}
+                        title={u.is_admin ? 'Remove admin' : 'Grant admin'}>
+                        <span style={{ position:'absolute', top:'2px', left: u.is_admin ? '14px' : '2px', width:'16px', height:'16px', borderRadius:'50%', background:'#fff', transition:'left .2s', display:'block' }} />
                       </button>
                     </td>
                     <td style={{ padding:'12px 16px' }}>
@@ -200,29 +178,14 @@ export default function AdminPanel() {
         </div>
       )}
 
-      {/* ── ROLE PREVIEW TAB ── */}
       {tab === 'preview' && (
         <div className="crm-card" style={{ padding:'24px' }}>
           <div style={{ fontWeight:700, color:'var(--text-primary)', marginBottom:'8px' }}>Preview Role View</div>
-          <div style={{ color:'var(--text-muted)', fontSize:'13px', marginBottom:'20px' }}>
-            See how the app looks for each role. Your admin access is unaffected.
-          </div>
+          <div style={{ color:'var(--text-muted)', fontSize:'13px', marginBottom:'20px' }}>See how the app looks for each role. Your admin access is unaffected.</div>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'12px' }}>
             {ROLE_OPTIONS.map(r => (
-              <button
-                key={r}
-                onClick={() => {
-                  setPreviewRole(r === previewRole ? null : r)
-                  localStorage.setItem('crm_preview_role', r === previewRole ? '' : r)
-                  window.location.href = '/'
-                }}
-                style={{
-                  padding:'14px', borderRadius:'8px', border:'1px solid', cursor:'pointer', textAlign:'left',
-                  background: previewRole === r ? 'rgba(34,197,94,0.1)' : 'var(--bg-elevated)',
-                  borderColor: previewRole === r ? 'var(--brand-green)' : 'var(--border)',
-                  color: 'var(--text-primary)',
-                }}
-              >
+              <button key={r} onClick={() => { setPreviewRole(r === previewRole ? null : r); localStorage.setItem('crm_preview_role', r === previewRole ? '' : r); window.location.href = '/' }}
+                style={{ padding:'14px', borderRadius:'8px', border:'1px solid', cursor:'pointer', textAlign:'left', background: previewRole === r ? 'rgba(34,197,94,0.1)' : 'var(--bg-elevated)', borderColor: previewRole === r ? 'var(--brand-green)' : 'var(--border)', color: 'var(--text-primary)' }}>
                 <div style={{ fontWeight:700, fontSize:'13px', marginBottom:'4px' }}>{ROLE_LABELS[r]}</div>
                 <div style={{ fontSize:'11px', color:'var(--text-muted)' }}>{r}</div>
               </button>
@@ -234,12 +197,9 @@ export default function AdminPanel() {
         </div>
       )}
 
-      {/* ── INTEGRATIONS TAB ── */}
       {tab === 'sources' && (
         <div>
-          <div style={{ color:'var(--text-muted)', fontSize:'13px', marginBottom:'20px' }}>
-            Manage data source connections. Active sources feed leads directly into the CRM.
-          </div>
+          <div style={{ color:'var(--text-muted)', fontSize:'13px', marginBottom:'20px' }}>Manage data source connections. Active sources feed leads directly into the CRM.</div>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px' }}>
             {SOURCE_CARDS.map(s => (
               <div key={s.id} className="crm-card" style={{ padding:'20px', display:'flex', gap:'14px', alignItems:'flex-start' }}>
@@ -247,22 +207,16 @@ export default function AdminPanel() {
                 <div style={{ flex:1 }}>
                   <div style={{ fontWeight:700, color:'var(--text-primary)', marginBottom:'4px', display:'flex', alignItems:'center', gap:'8px' }}>
                     {s.label}
-                    <span style={{
-                      fontSize:'10px', fontWeight:700, padding:'2px 7px', borderRadius:'999px',
+                    <span style={{ fontSize:'10px', fontWeight:700, padding:'2px 7px', borderRadius:'999px',
                       background: s.status==='active' ? 'rgba(34,197,94,0.15)' : s.status==='dormant' ? 'rgba(245,158,11,0.15)' : 'rgba(100,116,139,0.15)',
-                      color: s.status==='active' ? '#4ade80' : s.status==='dormant' ? '#fbbf24' : '#94a3b8',
-                    }}>
+                      color: s.status==='active' ? '#4ade80' : s.status==='dormant' ? '#fbbf24' : '#94a3b8' }}>
                       {s.status.toUpperCase()}
                     </span>
                   </div>
                   <div style={{ fontSize:'12px', color:'var(--text-muted)', marginBottom:'12px' }}>{s.desc}</div>
                   {s.status === 'dormant' && <button className="btn btn-secondary btn-sm" disabled>Activate (provide credentials)</button>}
                   {s.status === 'planned' && <button className="btn btn-ghost btn-sm" disabled>Coming soon</button>}
-                  {s.status === 'active'  && (
-                    <div style={{ display:'flex', alignItems:'center', gap:'6px', fontSize:'12px', color:'#4ade80' }}>
-                      <Check size={13} /> Connected
-                    </div>
-                  )}
+                  {s.status === 'active'  && <div style={{ display:'flex', alignItems:'center', gap:'6px', fontSize:'12px', color:'#4ade80' }}><Check size={13} /> Connected</div>}
                 </div>
               </div>
             ))}
@@ -270,16 +224,10 @@ export default function AdminPanel() {
         </div>
       )}
 
-      {/* ── AUDIT LOG TAB ── */}
       {tab === 'audit' && (
         <div>
           <div style={{ display:'flex', gap:'10px', marginBottom:'16px', alignItems:'center' }}>
-            <select
-              value={auditFilter}
-              onChange={e => { setAuditFilter(e.target.value); setAuditPage(0) }}
-              className="crm-input"
-              style={{ fontSize:'12px', width:'180px' }}
-            >
+            <select value={auditFilter} onChange={e => { setAuditFilter(e.target.value); setAuditPage(0) }} className="crm-input" style={{ fontSize:'12px', width:'180px' }}>
               <option value="">All actions</option>
               <option value="created">Created</option>
               <option value="updated">Updated</option>
@@ -287,23 +235,18 @@ export default function AdminPanel() {
               <option value="deleted">Deleted</option>
               <option value="profile_update">Profile Updates</option>
             </select>
-            <button onClick={loadAuditLog} className="btn btn-ghost btn-sm">
-              <RefreshCw size={13} /> Refresh
-            </button>
+            <button onClick={loadAuditLog} className="btn btn-ghost btn-sm"><RefreshCw size={13} /> Refresh</button>
             <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:'8px', fontSize:'12px', color:'var(--text-muted)' }}>
               <span>Page {auditPage + 1}</span>
               <button onClick={() => setAuditPage(p => Math.max(0, p-1))} disabled={auditPage===0} className="btn btn-ghost btn-sm">←</button>
               <button onClick={() => setAuditPage(p => p+1)} disabled={auditLogs.length < AUDIT_PAGE_SIZE} className="btn btn-ghost btn-sm">→</button>
             </div>
           </div>
-
           <div className="crm-card" style={{ padding:0, overflow:'hidden' }}>
             {auditLoading ? (
               <div style={{ padding:'32px', textAlign:'center', color:'var(--text-muted)' }}>Loading…</div>
             ) : auditLogs.length === 0 ? (
-              <div style={{ padding:'48px', textAlign:'center', color:'var(--text-muted)', fontSize:'13px' }}>
-                No audit entries yet. Entries appear automatically when leads or profiles are modified.
-              </div>
+              <div style={{ padding:'48px', textAlign:'center', color:'var(--text-muted)', fontSize:'13px' }}>No audit entries yet. Entries appear automatically when leads or profiles are modified.</div>
             ) : (
               <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'12px' }}>
                 <thead>
@@ -327,9 +270,7 @@ export default function AdminPanel() {
                             {log.action.replace(/_/g,' ').toUpperCase()}
                           </span>
                         </td>
-                        <td style={{ padding:'10px 14px', color:'var(--text-secondary)', whiteSpace:'nowrap' }}>
-                          {log.profiles?.full_name ?? '—'}
-                        </td>
+                        <td style={{ padding:'10px 14px', color:'var(--text-secondary)', whiteSpace:'nowrap' }}>{log.profiles?.full_name ?? '—'}</td>
                         <td style={{ padding:'10px 14px', color:'var(--text-primary)', maxWidth:'400px' }}>
                           <div style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{log.summary ?? '—'}</div>
                         </td>
