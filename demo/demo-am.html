@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mrkoon CRM — Account Manager Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg-base:#0a0a0f;--bg-surface:#12121a;--bg-elevated:#1a1a26;--bg-card:#1e1e2e;--brand-green:#22c55e;--brand-cyan:#22d3ee;--brand-green-dim:rgba(34,197,94,.12);--text-primary:#f1f5f9;--text-secondary:#94a3b8;--text-muted:#64748b;--border:rgba(255,255,255,.07);--danger:#ef4444;--warning:#f59e0b;--sidebar-w:220px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--bg-base);color:var(--text-primary);display:flex;height:100vh;overflow:hidden}
+.sidebar{width:var(--sidebar-w);background:var(--bg-surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-logo{padding:20px 18px 16px;border-bottom:1px solid var(--border)}
+.logo-text{font-size:18px;font-weight:800;color:var(--brand-green);letter-spacing:-.5px}
+.logo-sub{font-size:10px;color:var(--text-muted);margin-top:1px}
+.demo-badge{display:inline-block;margin-top:6px;padding:2px 7px;background:rgba(245,158,11,.15);color:var(--warning);border:1px solid rgba(245,158,11,.3);border-radius:4px;font-size:10px;font-weight:700}
+.nav-section{padding:12px 10px 6px}
+.nav-label{font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:.8px;text-transform:uppercase;padding:0 8px;margin-bottom:4px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;cursor:pointer;font-size:13px;color:var(--text-secondary);font-weight:500;margin-bottom:2px;transition:all .15s}
+.nav-item:hover,.nav-item.active{background:var(--bg-elevated);color:var(--text-primary)}
+.nav-item.active{background:var(--brand-green-dim);color:var(--brand-green);font-weight:600}
+.nav-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0}
+.sidebar-footer{margin-top:auto;padding:14px 18px;border-top:1px solid var(--border)}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:52px;background:var(--bg-surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;flex-shrink:0}
+.topbar-title{font-size:15px;font-weight:700;color:var(--text-primary)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.entity-badge{padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;background:rgba(34,197,94,.1);color:var(--brand-green);border:1px solid rgba(34,197,94,.25)}
+.page-content{flex:1;overflow-y:auto;padding:24px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.kpi-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+.kpi-label{font-size:11px;color:var(--text-muted);margin-bottom:5px;font-weight:500}
+.kpi-value{font-size:26px;font-weight:800;line-height:1}
+.kpi-sub{font-size:11px;color:var(--text-secondary);margin-top:4px}
+.crm-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px}
+.card-header{padding:14px 18px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:14px;font-weight:700;color:var(--text-primary)}
+.content-grid{display:grid;grid-template-columns:1fr 330px;gap:16px}
+/* cap bar */
+.cap-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:20px}
+.cap-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.cap-title{font-size:14px;font-weight:700;color:var(--text-primary)}
+.cap-nums{font-size:13px;color:var(--text-secondary)}
+.cap-bar-bg{height:10px;background:var(--bg-elevated);border-radius:6px;overflow:hidden}
+.cap-bar-fill{height:10px;background:linear-gradient(90deg,var(--brand-green),var(--brand-cyan));border-radius:6px;transition:width .8s ease}
+.cap-legend{display:flex;justify-content:space-between;margin-top:6px}
+.cap-legend-item{font-size:11px;color:var(--text-muted)}
+.cap-legend-item span{font-weight:700;color:var(--text-secondary)}
+/* account list */
+.account-row{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;cursor:pointer;transition:background .12s}
+.account-row:last-child{border-bottom:none}
+.account-row:hover{background:var(--bg-elevated)}
+.account-row.sel{background:var(--bg-elevated);border-left:3px solid var(--brand-green);padding-left:15px}
+.ac-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0}
+.ac-name{font-size:13px;font-weight:600;color:var(--text-primary)}
+.ac-note{font-size:11px;color:var(--text-muted);margin-top:2px}
+.ac-gmv{font-size:14px;font-weight:800;color:var(--brand-green);margin-left:auto;text-align:right;flex-shrink:0}
+.ac-gmv-sub{font-size:10px;color:var(--text-muted)}
+.pill{display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;margin-top:3px}
+.pill-active{background:rgba(34,197,94,.12);color:var(--brand-green)}
+.pill-renewal{background:rgba(167,139,250,.12);color:#a78bfa}
+/* renewal */
+.renewal-item{padding:11px 16px;border-bottom:1px solid var(--border)}
+.renewal-item:last-child{border-bottom:none}
+.renewal-name{font-size:13px;font-weight:600;color:var(--text-primary)}
+.renewal-date{font-size:11px;margin-top:2px}
+.renewal-date.urgent{color:var(--danger);font-weight:600}
+.renewal-date.soon{color:var(--warning)}
+.rbar-bg{margin-top:6px;height:4px;background:var(--bg-elevated);border-radius:2px}
+.rbar-fill{height:4px;border-radius:2px}
+/* action list */
+.action-item{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:9px}
+.action-item:last-child{border-bottom:none}
+.adot{width:7px;height:7px;border-radius:50%;margin-top:4px;flex-shrink:0}
+.adot.overdue{background:var(--danger);animation:pulse 2s infinite}
+.adot.today{background:var(--warning)}
+.adot.ok{background:var(--brand-green)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+/* tour */
+.tour-intro{display:none;position:fixed;inset:0;z-index:1000;background:linear-gradient(135deg,#050508,#0d0d1a,#050508);align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:40px}
+.tour-intro.active{display:flex}
+.ti-brand{font-size:30px;font-weight:800;color:var(--brand-green);letter-spacing:-1px;margin-bottom:6px}
+.ti-role{display:inline-block;padding:3px 12px;background:var(--brand-green-dim);border:1px solid rgba(34,197,94,.3);color:var(--brand-green);border-radius:20px;font-size:12px;font-weight:700;margin-bottom:22px}
+.ti-headline{font-size:22px;font-weight:800;color:var(--text-primary);margin-bottom:10px;line-height:1.3}
+.ti-sub{font-size:14px;color:var(--text-muted);max-width:420px;margin:0 auto 28px}
+.ti-steps{display:flex;gap:14px;margin-bottom:28px;justify-content:center;flex-wrap:wrap}
+.ti-step{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:11px 16px;min-width:110px;text-align:left}
+.ti-step-num{font-size:10px;font-weight:700;color:var(--brand-green);margin-bottom:3px}
+.ti-step-label{font-size:12px;font-weight:600;color:var(--text-primary)}
+.ti-btn{padding:13px 40px;background:var(--brand-green);border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;animation:glow 2s ease-in-out infinite}
+@keyframes glow{0%,100%{box-shadow:0 0 20px rgba(34,197,94,.2)}50%{box-shadow:0 0 40px rgba(34,197,94,.5)}}
+.ti-skip{margin-top:12px;background:none;border:none;color:var(--text-muted);font-family:inherit;font-size:12px;cursor:pointer}
+.tour-overlay{display:none;position:fixed;inset:0;z-index:800;pointer-events:none}
+.tour-overlay.active{display:block}
+.tour-spotlight{position:fixed;border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.62),0 0 0 2px var(--brand-green),0 0 24px rgba(34,197,94,.4);transition:all .5s cubic-bezier(.4,0,.2,1);pointer-events:none;z-index:801}
+.tour-card{position:fixed;z-index:802;background:#14141f;border:1px solid rgba(34,197,94,.35);border-radius:14px;padding:20px 22px;max-width:350px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.6);transition:opacity .3s,transform .3s;opacity:0;transform:translateY(10px)}
+.tour-card.visible{opacity:1;transform:translateY(0)}
+.tc-badge{display:inline-block;padding:3px 9px;background:var(--brand-green-dim);border:1px solid rgba(34,197,94,.3);color:var(--brand-green);border-radius:20px;font-size:10px;font-weight:700;margin-bottom:9px}
+.tour-card h3{font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:7px}
+.tour-card p{font-size:13px;color:var(--text-secondary);line-height:1.7;margin-bottom:14px}
+.tour-card p strong{color:var(--brand-green)}
+.tc-nav{display:flex;justify-content:space-between;align-items:center}
+.tc-dots{display:flex;gap:5px}
+.tc-dot{width:6px;height:6px;border-radius:50%;background:var(--bg-elevated);transition:all .3s}
+.tc-dot.active{background:var(--brand-green);width:18px;border-radius:4px}
+.tc-dot.done{background:rgba(34,197,94,.35)}
+.tc-btns{display:flex;gap:7px}
+.tc-skip{padding:6px 14px;border-radius:6px;background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+.tc-next{padding:6px 16px;border-radius:6px;background:var(--brand-green);border:none;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+</style>
+</head>
+<body>
+
+<div class="tour-intro active" id="tourIntro">
+  <div class="ti-brand">مركون CRM</div>
+  <div class="ti-role">Account Manager</div>
+  <div class="ti-headline">Your client portfolio,<br>fully in view</div>
+  <div class="ti-sub">Walk through how you manage active clients — capacity, GMV, renewals, and daily actions — all in one place.</div>
+  <div class="ti-steps">
+    <div class="ti-step"><div class="ti-step-num">01</div><div class="ti-step-label">Portfolio KPIs</div></div>
+    <div class="ti-step"><div class="ti-step-num">02</div><div class="ti-step-label">Capacity Bar</div></div>
+    <div class="ti-step"><div class="ti-step-num">03</div><div class="ti-step-label">Client List</div></div>
+    <div class="ti-step"><div class="ti-step-num">04</div><div class="ti-step-label">Renewals</div></div>
+    <div class="ti-step"><div class="ti-step-num">05</div><div class="ti-step-label">Daily Actions</div></div>
+  </div>
+  <button class="ti-btn" onclick="startTour()">Start Walkthrough</button>
+  <button class="ti-skip" onclick="skipTour()">Skip — go straight to demo</button>
+</div>
+
+<div class="tour-overlay" id="tourOverlay"></div>
+<div class="tour-spotlight" id="tourSpotlight" style="display:none"></div>
+<div class="tour-card" id="tourCard">
+  <div class="tc-badge" id="tcBadge">Step 1 of 6</div>
+  <h3 id="tcTitle"></h3>
+  <p id="tcText"></p>
+  <div class="tc-nav">
+    <div class="tc-dots" id="tcDots"></div>
+    <div class="tc-btns">
+      <button class="tc-skip" onclick="skipTour()">Skip</button>
+      <button class="tc-next" id="tcNext" onclick="nextStep()">Next</button>
+    </div>
+  </div>
+</div>
+
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-text">مركون</div>
+    <div class="logo-sub">Commercial CRM</div>
+    <div class="demo-badge">DEMO MODE</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">My Work</div>
+    <div class="nav-item active"><div class="nav-dot"></div>My Accounts</div>
+    <div class="nav-item"><div class="nav-dot"></div>Pipeline</div>
+    <div class="nav-item"><div class="nav-dot"></div>Actions</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Reports</div>
+    <div class="nav-item"><div class="nav-dot"></div>GMV Tracker</div>
+    <div class="nav-item"><div class="nav-dot"></div>Renewals</div>
+  </div>
+  <div class="sidebar-footer">
+    <div style="display:flex;align-items:center;gap:9px">
+      <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">Sh</div>
+      <div><div style="font-size:12px;font-weight:600;color:var(--text-primary)">Shams</div><div style="font-size:10px;color:var(--text-muted)">Account Manager · EG</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title">My Accounts</div>
+    <div class="topbar-right"><div class="entity-badge">EG Entity</div></div>
+  </div>
+
+  <div class="page-content">
+    <div class="kpi-row" id="kpiRow">
+      <div class="kpi-card"><div class="kpi-label">My Clients</div><div class="kpi-value" style="color:var(--brand-green)">9</div><div class="kpi-sub">Active + renewal</div></div>
+      <div class="kpi-card"><div class="kpi-label">Realized GMV</div><div class="kpi-value" style="color:var(--brand-cyan)" id="gmvVal">71K</div><div class="kpi-sub">EGP this quarter</div></div>
+      <div class="kpi-card" id="renewCard"><div class="kpi-label">Renewals Due</div><div class="kpi-value" style="color:var(--warning)">3</div><div class="kpi-sub">Next 30 days</div></div>
+      <div class="kpi-card"><div class="kpi-label">Actions Due</div><div class="kpi-value" style="color:var(--danger)">2</div><div class="kpi-sub">Today + overdue</div></div>
+    </div>
+
+    <div class="cap-card" id="capCard">
+      <div class="cap-header">
+        <div class="cap-title">Portfolio Capacity</div>
+        <div class="cap-nums">9 / 15 clients (60%)</div>
+      </div>
+      <div class="cap-bar-bg"><div class="cap-bar-fill" id="capBar" style="width:0%"></div></div>
+      <div class="cap-legend">
+        <div class="cap-legend-item">0</div>
+        <div class="cap-legend-item">Current: <span>9</span></div>
+        <div class="cap-legend-item">Max: <span>15</span></div>
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <div class="crm-card" id="accountList">
+        <div class="card-header"><div class="card-title">Client Portfolio</div><span style="font-size:11px;color:var(--text-muted)">9 active accounts</span></div>
+        <div id="acRows"></div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="crm-card" id="renewalCard">
+          <div class="card-header"><div class="card-title">Upcoming Renewals</div></div>
+          <div class="renewal-item"><div class="renewal-name">Nile Casting</div><div class="renewal-date urgent">Due: May 15, 2026</div><div class="rbar-bg"><div class="rbar-fill" style="width:15%;background:#ef4444"></div></div></div>
+          <div class="renewal-item"><div class="renewal-name">Horizon Fab.</div><div class="renewal-date urgent">Due: May 18, 2026</div><div class="rbar-bg"><div class="rbar-fill" style="width:20%;background:#ef4444"></div></div></div>
+          <div class="renewal-item"><div class="renewal-name">Gulf Metals</div><div class="renewal-date soon">Due: Jun 1, 2026</div><div class="rbar-bg"><div class="rbar-fill" style="width:45%;background:#f59e0b"></div></div></div>
+        </div>
+
+        <div class="crm-card" id="actionsCard">
+          <div class="card-header"><div class="card-title">My Actions</div></div>
+          <div class="action-item"><div class="adot overdue"></div><div><div style="font-size:13px;font-weight:600;color:var(--text-primary)">Cairo Steel Co.</div><div style="font-size:11px;color:var(--text-muted)">Monthly check-in — overdue</div></div></div>
+          <div class="action-item"><div class="adot today"></div><div><div style="font-size:13px;font-weight:600;color:var(--text-primary)">Al-Masry Group</div><div style="font-size:11px;color:var(--text-muted)">Send usage report — today</div></div></div>
+          <div class="action-item"><div class="adot ok"></div><div><div style="font-size:13px;font-weight:600;color:var(--text-primary)">Nile Casting</div><div style="font-size:11px;color:var(--text-muted)">Renewal discussion — May 8</div></div></div>
+          <div class="action-item"><div class="adot ok"></div><div><div style="font-size:13px;font-weight:600;color:var(--text-primary)">Horizon Fab.</div><div style="font-size:11px;color:var(--text-muted)">Contract review — May 10</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const ACCOUNTS=[
+  {n:'Cairo Steel Co.',c:'#16a34a',init:'CS',note:'Core client, high GMV',gmv:'12K',renewal:false},
+  {n:'Al-Masry Group',c:'#0e7490',init:'AM',note:'2nd month active',gmv:'10K',renewal:false},
+  {n:'Nile Casting',c:'#7c3aed',init:'NC',note:'Renewal due May 15',gmv:'9K',renewal:true},
+  {n:'Horizon Fab.',c:'#b45309',init:'HF',note:'Renewal due May 18',gmv:'8K',renewal:true},
+  {n:'Delta Iron',c:'#16a34a',init:'DI',note:'Stable',gmv:'8K',renewal:false},
+  {n:'Prime Scrap Co.',c:'#0e7490',init:'PS',note:'Growing GMV',gmv:'7K',renewal:false},
+  {n:'Gulf Metals',c:'#7c3aed',init:'GM',note:'Renewal due Jun 1',gmv:'7K',renewal:true},
+  {n:'Apex Recycling',c:'#16a34a',init:'AR',note:'Onboarded last month',gmv:'5K',renewal:false},
+  {n:'Al-Baraka Ind.',c:'#0e7490',init:'AB',note:'Active',gmv:'5K',renewal:false},
+]
+const rows=document.getElementById('acRows')
+ACCOUNTS.forEach((a,i)=>{
+  rows.innerHTML+=`<div class="account-row${i===0?' sel':''}" onclick="selAccount(this)">
+    <div class="ac-icon" style="background:${a.c}">${a.init}</div>
+    <div style="flex:1;min-width:0"><div class="ac-name">${a.n}</div><div class="ac-note">${a.note}</div><span class="pill ${a.renewal?'pill-renewal':'pill-active'}">${a.renewal?'Renewal':'Active'}</span></div>
+    <div><div class="ac-gmv">${a.gmv} EGP</div><div class="ac-gmv-sub">realized GMV</div></div>
+  </div>`
+})
+function selAccount(el){document.querySelectorAll('.account-row').forEach(r=>r.classList.remove('sel'));el.classList.add('sel')}
+
+// animate cap bar
+setTimeout(()=>{document.getElementById('capBar').style.width='60%'},400)
+
+// pulse GMV occasionally
+setInterval(()=>{
+  const el=document.getElementById('gmvVal')
+  el.style.color='rgba(34,211,238,.4)'
+  setTimeout(()=>{el.style.color='var(--brand-cyan)'},500)
+},12000)
+
+// tour
+const STEPS=[
+  {title:'Your portfolio at a glance',text:'Four KPIs give you your current state. <strong>Renewals Due</strong> is time-sensitive — missing a renewal means churn. Watch that number.',target:'#kpiRow',pos:'bottom'},
+  {title:'Portfolio capacity bar',text:'You have a maximum client cap. The bar shows how full your portfolio is. When you\'re near 100%, you stop receiving new client assignments.',target:'#capCard',pos:'bottom'},
+  {title:'Your client list',text:'Every client in your portfolio — name, status, realized GMV, and whether they\'re up for renewal. Click any row to open the full account profile.',target:'#accountList',pos:'right'},
+  {title:'Renewals need lead time',text:'Renewals require preparation — the bar shows time remaining. <strong>Red = urgent, under 2 weeks.</strong> Start the conversation before the deadline.',target:'#renewalCard',pos:'left'},
+  {title:'Your daily actions',text:'Every day starts here. Overdue check-ins damage client relationships. <strong>Same principle as BD</strong> — log every touch, keep the SNA clock healthy.',target:'#actionsCard',pos:'left'},
+  {title:'You\'re ready',text:'Portfolio view, capacity, renewals, actions — these four things are your daily workflow. The CRM tracks GMV automatically as clients use the platform.',target:null,pos:'center'},
+]
+let step=-1
+const spotlight=document.getElementById('tourSpotlight'),card=document.getElementById('tourCard'),TOTAL=STEPS.length
+function startTour(){document.getElementById('tourIntro').classList.remove('active');document.getElementById('tourOverlay').classList.add('active');document.getElementById('tcDots').innerHTML=STEPS.map((_,i)=>'<div class="tc-dot" id="d'+i+'"></div>').join('');step=-1;nextStep()}
+function skipTour(){document.getElementById('tourIntro').classList.remove('active');document.getElementById('tourOverlay').classList.remove('active');spotlight.style.display='none';card.classList.remove('visible')}
+function nextStep(){
+  step++;if(step>=TOTAL){endTour();return}
+  const s=STEPS[step];updateDots()
+  document.getElementById('tcBadge').textContent='Step '+(step+1)+' of '+TOTAL
+  document.getElementById('tcTitle').textContent=s.title
+  document.getElementById('tcText').innerHTML=s.text
+  document.getElementById('tcNext').textContent=step===TOTAL-1?'Finish':'Next'
+  card.classList.remove('visible')
+  setTimeout(()=>{if(s.target){posSL(s.target,s.pos)}else{spotlight.style.display='none';posCardCenter()};card.classList.add('visible')},100)
+}
+function posSL(sel,pos){
+  const el=document.querySelector(sel);if(!el){spotlight.style.display='none';posCardCenter();return}
+  el.scrollIntoView({behavior:'smooth',block:'nearest'})
+  setTimeout(()=>{const r=el.getBoundingClientRect(),pad=10;spotlight.style.cssText='display:block;position:fixed;top:'+(r.top-pad)+'px;left:'+(r.left-pad)+'px;width:'+(r.width+pad*2)+'px;height:'+(r.height+pad*2)+'px';posCard(r,pos)},320)
+}
+function posCard(r,pos){
+  const cw=350,vw=window.innerWidth,vh=window.innerHeight
+  let t,l
+  if(pos==='bottom'){t=r.bottom+16;l=Math.max(10,Math.min(r.left,vw-cw-10))}
+  else if(pos==='right'){t=Math.max(10,r.top);l=r.right+16}
+  else if(pos==='left'){t=Math.max(10,r.top);l=r.left-cw-16}
+  else{t=(vh-220)/2;l=(vw-cw)/2}
+  if(t+220>vh-10)t=vh-230;if(l<10)l=10;if(l+cw>vw-10)l=vw-cw-10
+  card.style.top=t+'px';card.style.left=l+'px'
+}
+function posCardCenter(){card.style.top=((window.innerHeight-220)/2)+'px';card.style.left=((window.innerWidth-350)/2)+'px'}
+function updateDots(){STEPS.forEach((_,i)=>{const d=document.getElementById('d'+i);if(!d)return;d.className='tc-dot'+(i===step?' active':i<step?' done':'')})}
+function endTour(){document.getElementById('tourOverlay').classList.remove('active');spotlight.style.display='none';card.classList.remove('visible')}
+</script>
+</body>
+</html>
