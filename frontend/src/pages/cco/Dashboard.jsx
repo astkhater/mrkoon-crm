@@ -108,7 +108,7 @@ function RepRow({ rep }) {
       <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '13px' }}>{rep.rep_name}</div>
       <div style={{ color: 'var(--text-secondary)' }}>{rep.count_client_active}</div>
       <div style={{ color: rep.count_sna_breached > 0 ? '#ef4444' : 'var(--text-secondary)' }}>
-        {rep.count_sna_breached > 0 ? '\u26a0 ' : ''}{rep.count_sna_breached}
+        {rep.count_sna_breached > 0 ? '! ' : ''}{rep.count_sna_breached}
       </div>
       <div style={{ color: 'var(--brand-cyan)' }}>{formatEGP(rep.total_weighted_gmv_month)}</div>
       <div style={{ color: 'var(--brand-green)' }}>{formatEGP(rep.total_contracted_gmv_month)}</div>
@@ -219,7 +219,7 @@ export default function CCODashboard() {
       .update({ assigned_to: repId })
       .eq('id', leadId)
     if (updateErr) {
-      toast('Failed to assign lead', 'error')
+      toast({ type: 'error', message: 'Failed to assign lead' })
     } else {
       queryClient.invalidateQueries({ queryKey: ['cco-stats'] })
     }
@@ -384,7 +384,7 @@ export default function CCODashboard() {
               ))}
               {data.poolCount > 50 && (
                 <div style={{ padding: '10px 16px', fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', borderTop: '1px solid var(--border-default)' }}>
-                  Showing 50 of {data.poolCount} pool leads
+                  {'Showing 50 of ' + data.poolCount + ' pool leads'}
                 </div>
               )}
             </>
