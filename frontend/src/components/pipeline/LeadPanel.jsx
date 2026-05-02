@@ -10,7 +10,7 @@ import { useAuth }     from '@/contexts/AuthContext'
 import { useApp }      from '@/contexts/AppContext'
 import { formatDate, formatEGP } from '@/lib/i18n'
 
-// ── Constants ─────────────────────────────────────────────────
+// Constants
 const ALL_PIPELINE_STAGES = [
   'new_lead', 'reaching_out', 'no_response', 'meeting_done',
   'negotiation', 'prospect_active', 'prospect_cold', 'reconnect',
@@ -26,21 +26,21 @@ const STAGE_COLORS = {
 }
 
 const ACTIVITY_TYPES = [
-  { key: 'note',           icon: '📝' },
-  { key: 'call',           icon: '📞' },
-  { key: 'whatsapp',       icon: '💬' },
-  { key: 'meeting_online', icon: '💻' },
-  { key: 'meeting_onsite', icon: '🤝' },
-  { key: 'site_visit',     icon: '🏭' },
+  { key: 'note'           },
+  { key: 'call'           },
+  { key: 'whatsapp'       },
+  { key: 'meeting_online' },
+  { key: 'meeting_onsite' },
+  { key: 'site_visit'     },
 ]
 
-const ACTIVITY_ICONS = {
-  note: '📝', call: '📞', whatsapp: '💬',
-  meeting_online: '💻', meeting_onsite: '🤝', site_visit: '🏭',
-  email: '✉️', document: '📄', stage_change: '🔄', status_change: '🔁', sna_alert: '⚠️',
+const ACTIVITY_TYPE_LABELS = {
+  note: 'Note', call: 'Call', whatsapp: 'WhatsApp',
+  meeting_online: 'Online Mtg', meeting_onsite: 'Onsite Mtg', site_visit: 'Site Visit',
+  email: 'Email', document: 'Doc', stage_change: 'Stage', status_change: 'Status', sna_alert: 'SNA',
 }
 
-// ── Data hooks ────────────────────────────────────────────────
+// Data hooks
 function useLead(leadId) {
   return useQuery({
     queryKey: ['lead', leadId],
@@ -74,7 +74,7 @@ function useActivities(leadId) {
   })
 }
 
-// ── Sub-components ────────────────────────────────────────────
+// Sub-components
 function InfoRow({ label, value, icon: Icon, alert }) {
   if (!value) return null
   return (
@@ -94,38 +94,34 @@ function ActivityItem({ activity, lang }) {
   const { t } = useApp()
   return (
     <div style={{ padding: '10px 0', borderBottom: '1px solid var(--border-default)', display: 'flex', gap: '10px' }}>
-      <span style={{ fontSize: '14px', flexShrink: 0, marginTop: '1px' }}>
-        {ACTIVITY_ICONS[activity.action_type] ?? '•'}
+      <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', flexShrink: 0, marginTop: '2px', minWidth: '38px' }}>
+        {ACTIVITY_TYPE_LABELS[activity.action_type] ?? activity.action_type}
       </span>
       <div style={{ flex: 1, minWidth: 0 }}>
-        {/* Stage change */}
         {activity.stage_from && activity.stage_to && (
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>
             {t('stage.' + activity.stage_from) + ' → ' + t('stage.' + activity.stage_to)}
           </div>
         )}
-        {/* Body */}
         {activity.body && (
           <div style={{ fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.5, wordBreak: 'break-word' }}>
             {activity.body}
           </div>
         )}
-        {/* Contact */}
         {activity.contact_person && (
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px' }}>
             {'with ' + activity.contact_person + (activity.contact_title ? ', ' + activity.contact_title : '')}
           </div>
         )}
-        {/* Meta */}
         <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>
-          {(activity.profiles?.full_name ?? '') + ' · ' + formatDate(activity.created_at, lang)}
+          {activity.profiles?.full_name} · {formatDate(activity.created_at, lang)}
         </div>
       </div>
     </div>
   )
 }
 
-// ── Main component ────────────────────────────────────────────
+// Main component
 export default function LeadPanel({ leadId, onClose }) {
   const { t, lang, toast } = useApp()
   const { userId }         = useAuth()
@@ -147,7 +143,6 @@ export default function LeadPanel({ leadId, onClose }) {
     ? Math.round(lead.estimated_gmv_month * lead.deal_success_rate / 100)
     : null
 
-  // ── Stage change ──────────────────────────────────────────
   async function changeStage(newStage) {
     const { error } = await supabase.from('leads').update({ stage: newStage }).eq('id', leadId)
     if (error) { toast(error.message, 'error'); return }
@@ -158,7 +153,6 @@ export default function LeadPanel({ leadId, onClose }) {
     toast('Stage updated', 'success')
   }
 
-  // ── Save deal value ───────────────────────────────────────
   async function saveDealValue() {
     const val = parseFloat(dealValueInput)
     if (isNaN(val) && dealValueInput.trim() !== '') return
@@ -171,7 +165,6 @@ export default function LeadPanel({ leadId, onClose }) {
     toast('Deal value saved', 'success')
   }
 
-  // ── Log activity ───────────────────────────────────────────
   async function handleLogActivity(e) {
     e.preventDefault()
     if (!actBody.trim()) return
@@ -215,7 +208,7 @@ export default function LeadPanel({ leadId, onClose }) {
           </div>
         ) : (
           <>
-            {/* ── Header ─────────────────────────────────── */}
+            {/* Header */}
             <div style={{
               padding: '14px 18px', flexShrink: 0,
               borderBottom: '1px solid var(--border-default)',
@@ -226,7 +219,6 @@ export default function LeadPanel({ leadId, onClose }) {
                   <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px', lineHeight: 1.3 }}>
                     {lead.company_name}
                   </div>
-                  {/* Stage selector */}
                   <div style={{ position: 'relative', display: 'inline-block' }}>
                     <button
                       onClick={() => setShowStageMenu(v => !v)}
@@ -275,10 +267,9 @@ export default function LeadPanel({ leadId, onClose }) {
               </div>
             </div>
 
-            {/* ── Scrollable body ─────────────────────────── */}
+            {/* Scrollable body */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 18px' }}>
 
-              {/* Info grid */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 20px', marginBottom: '16px' }}>
                 <InfoRow label="Assigned To" value={lead.profiles?.full_name} icon={User} />
                 <InfoRow label="Source"      value={t('source.' + (lead.lead_source ?? 'unknown'))} />
@@ -328,7 +319,6 @@ export default function LeadPanel({ leadId, onClose }) {
                       </div>
                     </div>
                   )}
-                  {/* Deal value always shown, editable */}
                   <div>
                     <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '2px' }}>
                       Deal Value
@@ -351,8 +341,8 @@ export default function LeadPanel({ leadId, onClose }) {
                           autoFocus
                           onKeyDown={e => { if (e.key === 'Enter') saveDealValue(); if (e.key === 'Escape') setEditDealValue(false) }}
                         />
-                        <button onClick={saveDealValue} className="btn btn-primary btn-xs">✓</button>
-                        <button onClick={() => setEditDealValue(false)} className="btn btn-ghost btn-xs">✕</button>
+                        <button onClick={saveDealValue} className="btn btn-primary btn-xs">Save</button>
+                        <button onClick={() => setEditDealValue(false)} className="btn btn-ghost btn-xs">Cancel</button>
                       </div>
                     ) : (
                       <div style={{ fontSize: '17px', fontWeight: 700, color: lead.deal_value ? '#a78bfa' : 'var(--text-muted)' }}>
@@ -363,7 +353,6 @@ export default function LeadPanel({ leadId, onClose }) {
                 </div>
               </div>
 
-              {/* Notes */}
               {lead.notes && (
                 <div className="crm-card" style={{ marginBottom: '16px', padding: '12px 14px' }}>
                   <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
@@ -381,19 +370,17 @@ export default function LeadPanel({ leadId, onClose }) {
                   Log Activity
                 </div>
                 <form onSubmit={handleLogActivity}>
-                  {/* Type tabs */}
                   <div style={{ display: 'flex', gap: '5px', marginBottom: '10px', flexWrap: 'wrap' }}>
-                    {ACTIVITY_TYPES.map(({ key, icon }) => (
+                    {ACTIVITY_TYPES.map(({ key }) => (
                       <button key={key} type="button"
                         onClick={() => setActType(key)}
                         className={'btn btn-xs ' + (actType === key ? 'btn-primary' : 'btn-secondary')}
                       >
-                        {icon + ' ' + key.replace('_', ' ')}
+                        {ACTIVITY_TYPE_LABELS[key]}
                       </button>
                     ))}
                   </div>
 
-                  {/* Contact row */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                     <input
                       className="crm-input"
@@ -411,7 +398,6 @@ export default function LeadPanel({ leadId, onClose }) {
                     />
                   </div>
 
-                  {/* Body */}
                   <textarea
                     className="crm-input"
                     placeholder={actType.replace('_', ' ') + ' notes...'}
