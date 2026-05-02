@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mrkoon CRM — Executive Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg-base:#0a0a0f;--bg-surface:#12121a;--bg-elevated:#1a1a26;--bg-card:#1e1e2e;--brand-green:#22c55e;--brand-cyan:#22d3ee;--brand-green-dim:rgba(34,197,94,.12);--brand-cyan-dim:rgba(34,211,238,.12);--text-primary:#f1f5f9;--text-secondary:#94a3b8;--text-muted:#64748b;--border:rgba(255,255,255,.07);--danger:#ef4444;--warning:#f59e0b;--sidebar-w:220px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--bg-base);color:var(--text-primary);display:flex;height:100vh;overflow:hidden}
+.sidebar{width:var(--sidebar-w);background:var(--bg-surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-logo{padding:20px 18px 16px;border-bottom:1px solid var(--border)}
+.logo-text{font-size:18px;font-weight:800;color:var(--brand-green);letter-spacing:-.5px}
+.logo-sub{font-size:10px;color:var(--text-muted);margin-top:1px}
+.demo-badge{display:inline-block;margin-top:6px;padding:2px 7px;background:rgba(245,158,11,.15);color:var(--warning);border:1px solid rgba(245,158,11,.3);border-radius:4px;font-size:10px;font-weight:700}
+.entity-switcher{margin:10px 10px 4px;display:flex;border-radius:7px;overflow:hidden;border:1px solid var(--border)}
+.e-btn{flex:1;padding:7px 0;text-align:center;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;color:var(--text-muted);background:transparent;border:none;font-family:inherit}
+.e-btn.active{background:var(--bg-elevated);color:var(--text-primary)}
+.nav-section{padding:12px 10px 6px}
+.nav-label{font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:.8px;text-transform:uppercase;padding:0 8px;margin-bottom:4px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;cursor:pointer;font-size:13px;color:var(--text-secondary);font-weight:500;margin-bottom:2px;transition:all .15s}
+.nav-item:hover,.nav-item.active{background:var(--bg-elevated);color:var(--text-primary)}
+.nav-item.active{background:var(--brand-green-dim);color:var(--brand-green);font-weight:600}
+.nav-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0}
+.sidebar-footer{margin-top:auto;padding:14px 18px;border-top:1px solid var(--border)}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:52px;background:var(--bg-surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;flex-shrink:0}
+.topbar-title{font-size:15px;font-weight:700;color:var(--text-primary)}
+.topbar-right{margin-left:auto}
+.entity-badge{padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700}
+.page-content{flex:1;overflow-y:auto;padding:24px}
+.kpi-row{display:grid;gap:14px;margin-bottom:20px}
+.kpi-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;transition:all .3s}
+.kpi-label{font-size:11px;color:var(--text-muted);margin-bottom:5px;font-weight:500}
+.kpi-value{font-size:26px;font-weight:800;line-height:1;transition:color .4s}
+.kpi-sub{font-size:11px;color:var(--text-secondary);margin-top:4px}
+.crm-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px}
+.card-header{padding:14px 18px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:14px;font-weight:700;color:var(--text-primary)}
+.market-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.market-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:18px 20px;transition:all .4s}
+.market-label{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.market-name{font-size:16px;font-weight:800;color:var(--text-primary);margin-bottom:14px}
+.market-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center}
+.mstat-val{font-size:22px;font-weight:800;transition:color .4s}
+.mstat-lbl{font-size:11px;color:var(--text-muted);margin-top:2px}
+.content-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.stage-row{padding:7px 18px;display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--border)}
+.stage-row:last-child{border-bottom:none}
+.stage-name{font-size:12px;color:var(--text-secondary);width:140px;flex-shrink:0;text-transform:capitalize}
+.stage-bar-bg{flex:1;height:5px;background:var(--bg-elevated);border-radius:3px}
+.stage-bar-fill{height:5px;border-radius:3px;transition:width .5s ease}
+.stage-cnt{font-size:12px;font-weight:700;color:var(--text-primary);width:22px;text-align:right;flex-shrink:0}
+.rep-table{width:100%;border-collapse:collapse}
+.rep-table th{padding:9px 14px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);text-align:left}
+.rep-table td{padding:10px 14px;font-size:13px;border-bottom:1px solid var(--border)}
+.rep-table tr:last-child td{border-bottom:none}
+.rep-table tr:hover td{background:var(--bg-elevated)}
+.e-tag{display:inline-block;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700}
+.e-tag-eg{background:rgba(34,197,94,.12);color:var(--brand-green)}
+.e-tag-ksa{background:rgba(34,211,238,.12);color:var(--brand-cyan)}
+/* tour */
+.tour-intro{display:none;position:fixed;inset:0;z-index:1000;background:linear-gradient(135deg,#050508,#0d0d1a,#050508);align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:40px}
+.tour-intro.active{display:flex}
+.ti-brand{font-size:30px;font-weight:800;color:var(--brand-green);letter-spacing:-1px;margin-bottom:6px}
+.ti-role{display:inline-block;padding:3px 12px;background:var(--brand-green-dim);border:1px solid rgba(34,197,94,.3);color:var(--brand-green);border-radius:20px;font-size:12px;font-weight:700;margin-bottom:22px}
+.ti-headline{font-size:22px;font-weight:800;color:var(--text-primary);margin-bottom:10px;line-height:1.3}
+.ti-sub{font-size:14px;color:var(--text-muted);max-width:420px;margin:0 auto 28px}
+.ti-steps{display:flex;gap:14px;margin-bottom:28px;justify-content:center;flex-wrap:wrap}
+.ti-step{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:11px 16px;min-width:110px;text-align:left}
+.ti-step-num{font-size:10px;font-weight:700;color:var(--brand-green);margin-bottom:3px}
+.ti-step-label{font-size:12px;font-weight:600;color:var(--text-primary)}
+.ti-btn{padding:13px 40px;background:var(--brand-green);border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;animation:glow 2s ease-in-out infinite}
+@keyframes glow{0%,100%{box-shadow:0 0 20px rgba(34,197,94,.2)}50%{box-shadow:0 0 40px rgba(34,197,94,.5)}}
+.ti-skip{margin-top:12px;background:none;border:none;color:var(--text-muted);font-family:inherit;font-size:12px;cursor:pointer}
+.tour-overlay{display:none;position:fixed;inset:0;z-index:800;pointer-events:none}
+.tour-overlay.active{display:block}
+.tour-spotlight{position:fixed;border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.62),0 0 0 2px var(--brand-green),0 0 24px rgba(34,197,94,.4);transition:all .5s cubic-bezier(.4,0,.2,1);pointer-events:none;z-index:801}
+.tour-card{position:fixed;z-index:802;background:#14141f;border:1px solid rgba(34,197,94,.35);border-radius:14px;padding:20px 22px;max-width:350px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.6);transition:opacity .3s,transform .3s;opacity:0;transform:translateY(10px)}
+.tour-card.visible{opacity:1;transform:translateY(0)}
+.tc-badge{display:inline-block;padding:3px 9px;background:var(--brand-green-dim);border:1px solid rgba(34,197,94,.3);color:var(--brand-green);border-radius:20px;font-size:10px;font-weight:700;margin-bottom:9px}
+.tc-sim{display:inline-block;padding:3px 9px;background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.2);color:var(--brand-cyan);border-radius:6px;font-size:10px;font-weight:700;margin-bottom:9px;margin-left:6px}
+.tour-card h3{font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:9px}
+.tour-card p{font-size:13px;color:var(--text-secondary);line-height:1.7;margin-bottom:14px}
+.tour-card p strong{color:var(--brand-green)}
+.tc-nav{display:flex;justify-content:space-between;align-items:center}
+.tc-dots{display:flex;gap:5px}
+.tc-dot{width:6px;height:6px;border-radius:50%;background:var(--bg-elevated);transition:all .3s}
+.tc-dot.active{background:var(--brand-green);width:18px;border-radius:4px}
+.tc-dot.done{background:rgba(34,197,94,.35)}
+.tc-btns{display:flex;gap:7px}
+.tc-skip{padding:6px 14px;border-radius:6px;background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+.tc-next{padding:6px 16px;border-radius:6px;background:var(--brand-green);border:none;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+</style>
+</head>
+<body>
+
+<div class="tour-intro active" id="tourIntro">
+  <div class="ti-brand">مركون CRM</div>
+  <div class="ti-role">CEO / Executive View</div>
+  <div class="ti-headline">Both markets.<br>One dashboard.</div>
+  <div class="ti-sub">Walk through the holding view, then drill into Egypt and KSA individually — with live switching between the two markets.</div>
+  <div class="ti-steps">
+    <div class="ti-step"><div class="ti-step-num">01</div><div class="ti-step-label">Holding KPIs</div></div>
+    <div class="ti-step"><div class="ti-step-num">02</div><div class="ti-step-label">Market Split</div></div>
+    <div class="ti-step"><div class="ti-step-num">03</div><div class="ti-step-label">Switch to EG</div></div>
+    <div class="ti-step"><div class="ti-step-num">04</div><div class="ti-step-label">Switch to KSA</div></div>
+    <div class="ti-step"><div class="ti-step-num">05</div><div class="ti-step-label">Team view</div></div>
+  </div>
+  <button class="ti-btn" onclick="startTour()">Start Walkthrough</button>
+  <button class="ti-skip" onclick="skipTour()">Skip — go straight to demo</button>
+</div>
+
+<div class="tour-overlay" id="tourOverlay"></div>
+<div class="tour-spotlight" id="tourSpotlight" style="display:none"></div>
+<div class="tour-card" id="tourCard">
+  <div>
+    <span class="tc-badge" id="tcBadge">Step 1 of 7</span>
+    <span class="tc-sim" id="tcSim" style="display:none">Switching market view</span>
+  </div>
+  <h3 id="tcTitle"></h3>
+  <p id="tcText"></p>
+  <div class="tc-nav">
+    <div class="tc-dots" id="tcDots"></div>
+    <div class="tc-btns">
+      <button class="tc-skip" onclick="skipTour()">Skip</button>
+      <button class="tc-next" id="tcNext" onclick="nextStep()">Next</button>
+    </div>
+  </div>
+</div>
+
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-text">مركون</div>
+    <div class="logo-sub">Commercial CRM</div>
+    <div class="demo-badge">DEMO MODE</div>
+  </div>
+
+  <div style="padding:10px 10px 0">
+    <div style="font-size:11px;font-weight:600;color:var(--text-muted);letter-spacing:.5px;padding:0 8px 6px;text-transform:uppercase">View</div>
+    <div class="entity-switcher" id="switcher">
+      <button class="e-btn active" id="btn-holding" onclick="setView('holding')">Holding</button>
+      <button class="e-btn" id="btn-EG" onclick="setView('EG')">EG</button>
+      <button class="e-btn" id="btn-KSA" onclick="setView('KSA')">KSA</button>
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Navigation</div>
+    <div class="nav-item active"><div class="nav-dot"></div>Dashboard</div>
+    <div class="nav-item"><div class="nav-dot"></div>Pipeline</div>
+    <div class="nav-item"><div class="nav-dot"></div>Reports</div>
+  </div>
+  <div class="sidebar-footer">
+    <div style="display:flex;align-items:center;gap:9px">
+      <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#b45309,#f59e0b);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">K</div>
+      <div><div style="font-size:12px;font-weight:600;color:var(--text-primary)">Khater</div><div style="font-size:10px;color:var(--text-muted)">CEO · Holding</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="topbarTitle">Holding — Both Markets</div>
+    <div class="topbar-right">
+      <div class="entity-badge" id="entityBadge" style="background:rgba(167,139,250,.1);color:#a78bfa;border:1px solid rgba(167,139,250,.25)">Holding</div>
+    </div>
+  </div>
+  <div class="page-content" id="pageContent"></div>
+</div>
+
+<script>
+const D={
+  EG:{total:47,active:18,clients:9,lost:5,gmv:'142K',curr:'EGP',
+    reps:[{n:'Yassin',e:'EG',a:7,c:4,g:'58K'},{n:'Salah',e:'EG',a:6,c:3,g:'51K'},{n:'Shams',e:'EG',a:5,c:9,g:'33K'}],
+    stages:[{s:'client_active',c:7,color:'#22c55e'},{s:'prospect_active',c:6,color:'#22d3ee'},{s:'negotiation',c:5,color:'#a78bfa'},{s:'meeting_done',c:5,color:'#f59e0b'},{s:'reaching_out',c:9,color:'#64748b'},{s:'no_response',c:6,color:'#475569'},{s:'client_renewal',c:2,color:'#7c3aed'},{s:'lost',c:5,color:'#ef4444'}]},
+  KSA:{total:31,active:11,clients:5,lost:3,gmv:'89K',curr:'SAR',
+    reps:[{n:'Faisal',e:'KSA',a:6,c:3,g:'54K'},{n:'Omar',e:'KSA',a:5,c:2,g:'35K'}],
+    stages:[{s:'client_active',c:5,color:'#22c55e'},{s:'prospect_active',c:4,color:'#22d3ee'},{s:'negotiation',c:2,color:'#a78bfa'},{s:'meeting_done',c:3,color:'#f59e0b'},{s:'reaching_out',c:7,color:'#64748b'},{s:'no_response',c:4,color:'#475569'},{s:'client_renewal',c:0,color:'#7c3aed'},{s:'lost',c:3,color:'#ef4444'}]}
+}
+let curView='holding'
+function setView(v){
+  curView=v
+  document.querySelectorAll('.e-btn').forEach(b=>b.classList.remove('active'))
+  document.getElementById('btn-'+v).classList.add('active')
+  render()
+}
+function stageBarsHtml(stages,total){
+  return stages.filter(s=>s.c>0).map(s=>{
+    const pct=total?Math.round(s.c/total*100):0
+    return `<div class="stage-row"><div class="stage-name">${s.s.replace(/_/g,' ')}</div><div class="stage-bar-bg"><div class="stage-bar-fill" style="width:${pct}%;background:${s.color}"></div></div><div class="stage-cnt">${s.c}</div></div>`
+  }).join('')
+}
+function repRowsHtml(reps,showEntity){
+  return reps.map(r=>`<tr>
+    <td style="color:var(--text-primary);font-weight:600">${r.n}</td>
+    ${showEntity?`<td><span class="e-tag ${r.e==='EG'?'e-tag-eg':'e-tag-ksa'}">${r.e}</span></td>`:''}
+    <td style="color:var(--brand-cyan);font-weight:700">${r.a}</td>
+    <td style="color:#a78bfa;font-weight:700">${r.c}</td>
+    <td style="color:var(--brand-green);font-weight:700">${r.g} ${r.e==='EG'?'EGP':'SAR'}</td>
+  </tr>`).join('')
+}
+function render(){
+  const title=document.getElementById('topbarTitle'),badge=document.getElementById('entityBadge'),pc=document.getElementById('pageContent')
+  if(curView==='holding'){
+    title.textContent='Holding — Both Markets'
+    badge.textContent='Holding';badge.style.cssText='padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;background:rgba(167,139,250,.1);color:#a78bfa;border:1px solid rgba(167,139,250,.25)'
+    const eg=D.EG,ksa=D.KSA
+    const tL=eg.total+ksa.total,tA=eg.active+ksa.active,tC=eg.clients+ksa.clients,tX=eg.lost+ksa.lost
+    const allReps=[...eg.reps,...ksa.reps]
+    const stageMap={}
+    ;[...eg.stages,...ksa.stages].forEach(s=>{stageMap[s.s]={c:(stageMap[s.s]?.c||0)+s.c,color:s.color}})
+    const allStages=Object.entries(stageMap).map(([s,v])=>({s,...v})).filter(x=>x.c>0).sort((a,b)=>b.c-a.c)
+    pc.innerHTML=`
+      <div class="kpi-row" id="kpiRow" style="grid-template-columns:repeat(4,1fr)">
+        <div class="kpi-card"><div class="kpi-label">Total Leads</div><div class="kpi-value" style="color:var(--text-primary)">${tL}</div><div class="kpi-sub">EG + KSA combined</div></div>
+        <div class="kpi-card"><div class="kpi-label">Active Pipeline</div><div class="kpi-value" style="color:var(--brand-cyan)">${tA}</div><div class="kpi-sub">In active stages</div></div>
+        <div class="kpi-card"><div class="kpi-label">Total Clients</div><div class="kpi-value" style="color:#a78bfa">${tC}</div><div class="kpi-sub">Active + renewal</div></div>
+        <div class="kpi-card"><div class="kpi-label">Lost</div><div class="kpi-value" style="color:var(--danger)">${tX}</div><div class="kpi-sub">All time</div></div>
+      </div>
+      <div class="market-grid" id="marketGrid">
+        <div class="market-card" id="egCard">
+          <div class="market-label">EG</div><div class="market-name">Egypt</div>
+          <div class="market-stats">
+            <div><div class="mstat-val" style="color:var(--brand-green)">${eg.total}</div><div class="mstat-lbl">Leads</div></div>
+            <div><div class="mstat-val" style="color:var(--brand-cyan)">${eg.active}</div><div class="mstat-lbl">Active</div></div>
+            <div><div class="mstat-val" style="color:#a78bfa">${eg.clients}</div><div class="mstat-lbl">Clients</div></div>
+          </div>
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+            <div style="font-size:12px;color:var(--text-muted)">Weighted GMV</div>
+            <div style="font-size:16px;font-weight:800;color:var(--brand-green)">${eg.gmv} EGP</div>
+          </div>
+        </div>
+        <div class="market-card" id="ksaCard">
+          <div class="market-label">KSA</div><div class="market-name">Saudi Arabia</div>
+          <div class="market-stats">
+            <div><div class="mstat-val" style="color:var(--brand-cyan)">${ksa.total}</div><div class="mstat-lbl">Leads</div></div>
+            <div><div class="mstat-val" style="color:var(--brand-cyan)">${ksa.active}</div><div class="mstat-lbl">Active</div></div>
+            <div><div class="mstat-val" style="color:#a78bfa">${ksa.clients}</div><div class="mstat-lbl">Clients</div></div>
+          </div>
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+            <div style="font-size:12px;color:var(--text-muted)">Weighted GMV</div>
+            <div style="font-size:16px;font-weight:800;color:var(--brand-cyan)">${ksa.gmv} SAR</div>
+    </div>
+        </div>
+      </div>
+      <div class="content-grid">
+        <div class="crm-card"><div class="card-header"><div class="card-title">Pipeline Distribution — Both Markets</div></div>${stageBarsHtml(allStages,tL)}</div>
+        <div class="crm-card" id="repTableCard"><div class="card-header"><div class="card-title">All Reps</div><span style="font-size:11px;color:var(--text-muted)">Holding view</span></div>
+          <table class="rep-table"><thead><tr><th>Rep</th><th>Entity</th><th>Active</th><th>Clients</th><th>GMV</th></tr></thead><tbody>${repRowsHtml(allReps,true)}</tbody></table>
+        </div>
+      </div>`
+  } else {
+    const d=D[curView],isEG=curView==='EG',label=isEG?'Egypt':'Saudi Arabia'
+    title.textContent=label+' Portfolio'
+    badge.textContent=curView
+    badge.style.cssText='padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;background:'+(isEG?'rgba(34,197,94,.1)':'rgba(34,211,238,.1)')+';color:'+(isEG?'var(--brand-green)':'var(--brand-cyan)')+';border:1px solid '+(isEG?'rgba(34,197,94,.25)':'rgba(34,211,238,.25)')
+    pc.innerHTML=`
+      <div class="kpi-row" id="kpiRow" style="grid-template-columns:repeat(4,1fr)">
+        <div class="kpi-card"><div class="kpi-label">Total Leads</div><div class="kpi-value" style="color:var(--text-primary)">${d.total}</div><div class="kpi-sub">${curView} entity</div></div>
+        <div class="kpi-card"><div class="kpi-label">Active Pipeline</div><div class="kpi-value" style="color:var(--brand-cyan)">${d.active}</div><div class="kpi-sub">Meeting to renewal</div></div>
+        <div class="kpi-card"><div class="kpi-label">Active Clients</div><div class="kpi-value" style="color:#a78bfa">${d.clients}</div><div class="kpi-sub">Client active + renewal</div></div>
+        <div class="kpi-card"><div class="kpi-label">Lost</div><div class="kpi-value" style="color:var(--danger)">${d.lost}</div><div class="kpi-sub">Closed lost</div></div>
+      </div>
+      <div class="content-grid">
+        <div class="crm-card"><div class="card-header"><div class="card-title">Pipeline by Stage</div><span style="font-size:11px;color:var(--text-muted)">${label}</span></div>${stageBarsHtml(d.stages,d.total)}</div>
+        <div class="crm-card" id="repTableCard"><div class="card-header"><div class="card-title">Team Performance</div><span style="font-size:11px;color:var(--text-muted)">${label} team</span></div>
+          <table class="rep-table"><thead><tr><th>Rep</th><th>Active</th><th>Clients</th><th>GMV</th></tr></thead><tbody>${repRowsHtml(d.reps,false)}</tbody></table>
+        </div>
+      </div>`
+  }
+}
+render()
+
+// tour
+const STEPS=[
+  {title:'Full holding view',text:'By default you see both markets combined — total pipeline, active leads, clients, and losses across EG and KSA in one set of numbers.',target:'#kpiRow',pos:'bottom',view:'holding'},
+  {title:'EG vs KSA comparison',text:'The market cards show each entity side by side. GMV, active pipeline, and client count — <strong>instantly comparable</strong> without switching views.',target:'#marketGrid',pos:'bottom',view:'holding'},
+  {title:'Switching to Egypt',text:'Click EG in the switcher to drill into the Egypt pipeline only. The entire view re-renders with EG-only data and the Egypt team.',target:'#switcher',pos:'bottom',view:'holding',action:'switchEG'},
+  {title:'Egypt team performance',text:'Stage-by-stage breakdown for EG plus the rep table. You can see exactly where the pipeline is stacking up and who\'s driving it.',target:'#repTableCard',pos:'left',view:'EG'},
+  {title:'Switching to KSA',text:'Same view, different market. KSA data loads instantly — leads, stages, rges, reps, GMV all scoped to the Saudi pipeline.',target:'#switcher',pos:'bottom',view:'EG',action:'switchKSA'},
+  {title:'KSA team',text:'The KSA view shows the Saudi team in isolation. As KSA scales, this view grows with it — the holding view always sums both automatically.',target:'#repTableCard',pos:'left',view:'KSA'},
+  {title:'You\'re ready',text:'Holding gives you the 30,000-foot view. EG and KSA drill into each market. <strong>One switcher, three levels of visibility.</strong>',target:null,pos:'center',view:'KSA'},
+]
+let step=-1
+const spotlight=document.getElementById('tourSpotlight'),card=document.getElementById('tourCard'),TOTAL=STEPS.length
+function startTour(){document.getElementById('tourIntro').classList.remove('active');document.getElementById('tourOverlay').classList.add('active');document.getElementById('tcDots').innerHTML=STEPS.map((_,i)=>'<div class="tc-dot" id="d'+i+'"></div>').join('');step=-1;nextStep()}
+function skipTour(){document.getElementById('tourIntro').classList.remove('active');document.getElementById('tourOverlay').classList.remove('active');spotlight.style.display='none';card.classList.remove('visible')}
+function nextStep(){
+  step++;if(step>=TOTAL){endTour();return}
+  const s=STEPS[step];updateDots()
+  document.getElementById('tcBadge').textContent='Step '+(step+1)+' of '+TOTAL
+  document.getElementById('tcTitle').textContent=s.title
+  document.getElementById('tcText').innerHTML=s.text
+  document.getElementById('tcNext').textContent=step===TOTAL-1?'Finish':'Next'
+  document.getElementById('tcSim').style.display=(s.action==='switchEG'||s.action==='switchKSA')?'inline-block':'none'
+  if(s.action==='switchEG'){setView('EG')}
+  else if(s.action==='switchKSA'){setView('KSA')}
+  else if(s.view&&s.view!==curView){setView(s.view)}
+  card.classList.remove('visible')
+  setTimeout(()=>{if(s.target){posSL(s.target,s.pos)}else{spotlight.style.display='none';posCardCenter()};card.classList.add('visible')},s.action?500:100)
+}
+function posSL(sel,pos){
+  const el=document.querySelector(sel);if(!el){spotlight.style.display='none';posCardCenter();return}
+  el.scrollIntoView({behavior:'smooth',block:'nearest'})
+  setTimeout(()=>{const r=el.getBoundingClientRect(),pad=10;spotlight.style.cssText='display:block;position:fixed;top:'+(r.top-pad)+'px;left:'+(r.left-pad)+'px;width:'+(r.width+pad*2)+'px;height:'+(r.height+pad*2)+'px';posCard(r,pos)},320)
+}
+function posCard(r,pos){
+  const cw=350,vw=window.innerWidth,vh=window.innerHeight
+  let t,l
+  if(pos==='bottom'){t=r.bottom+16;l=Math.max(10,Math.min(r.left,vw-cw-10))}
+  else if(pos==='right'){t=Math.max(10,r.top);l=r.right+16}
+  else if(pos==='left'){t=Math.max(10,r.top);l=r.left-cw-16}
+  else{t=(vh-220)/2;l=(vw-cw)/2}
+  if(t+220>vh-10)t=vh-230;if(l<10)l=10;if(l+cw>vw-10)l=vw-cw-10
+  card.style.top=t+'px';card.style.left=l+'px'
+}
+function posCardCenter(){card.style.top=((window.innerHeight-220)/2)+'px';card.style.left=((window.innerWidth-350)/2)+'px'}
+function updateDots(){STEPS.forEach((_,i)=>{const d=document.getElementById('d'+i);if(!d)return;d.className='tc-dot'+(i===step?' active':i<step?' done':'')})}
+function endTour(){document.getElementById('tourOverlay').classList.remove('active');spotlight.style.display='none';card.classList.remove('visible')}
+</script>
+</body>
+</html>
