@@ -6,48 +6,160 @@
 import { useState } from 'react'
 import { X, ArrowRight, ArrowLeft, CheckCircle } from 'lucide-react'
 
+// Role-specific step definitions
 const STEPS = {
   cco: [
-    { title: 'Welcome, CCO 👋', body: "You have full visibility across all reps, leads, and accounts. This tour covers your key workflows.", icon: '🛡️' },
-    { title: 'CCO Dashboard', body: "Your dashboard shows team KPIs, rep performance, stage breakdown, and overdue actions at a glance.", icon: '📊', highlight: '/dashboard/cco' },
-    { title: 'Pipeline View', body: "Use the Kanban board to see all leads by stage. Filter by rep or entity. Drag is not available yet — change stages from the lead panel.", icon: '🏗️', highlight: '/pipeline' },
-    { title: 'Leads Table', body: "Search by company name, contact name, or phone. Filter by stage, source, entity, or rep. Click any row to open the lead detail panel.", icon: '👥', highlight: '/leads' },
-    { title: 'Import Leads', body: "Upload a CSV to bulk-import leads. The system checks for duplicates by company name. Map columns on upload.", icon: '📤', highlight: '/import' },
-    { title: 'Ask AI', body: "Use the AI assistant for pipeline summaries, draft messages, or analysis. Set your AI key in settings first.", icon: '✨', highlight: '/ask-ai' },
+    {
+      title: 'Welcome, CCO',
+      body: "You have full visibility across all reps, leads, and accounts. This tour covers your key workflows.",
+    },
+    {
+      title: 'CCO Dashboard',
+      body: "Your dashboard shows team KPIs, rep performance, stage breakdown, and overdue actions at a glance.",
+      highlight: '/dashboard/cco',
+    },
+    {
+      title: 'Pipeline View',
+      body: "Use the Kanban board to see all leads by stage. Filter by rep or entity. Drag is not available yet — change stages from the lead panel.",
+      highlight: '/pipeline',
+    },
+    {
+      title: 'Leads Table',
+      body: "Search by company name, contact name, or phone. Filter by stage, source, entity, or rep. Click any row to open the lead detail panel.",
+      highlight: '/leads',
+    },
+    {
+      title: 'Import Leads',
+      body: "Upload a CSV to bulk-import leads. The system checks for duplicates by company name. Map columns on upload.",
+      highlight: '/import',
+    },
+    {
+      title: 'Ask AI',
+      body: "Use the AI assistant for pipeline summaries, draft messages, or analysis. Set your AI key in settings first.",
+      highlight: '/ask-ai',
+    },
   ],
   ceo: [
-    { title: 'Welcome, CEO 👋', body: "You have holding-level visibility across Egypt and KSA. This tour covers your key dashboards and controls.", icon: '🌐' },
-    { title: 'Holding Dashboard', body: "Switch between EG, KSA, and Holding views using the toggle in the left sidebar. Holding shows both markets side-by-side.", icon: '📊', highlight: '/dashboard/executive' },
-    { title: 'BD Working Mode', body: "Click 'Work as BD' in the sidebar to switch into a rep-style view for your own leads. Your executive access is preserved — click 'Exit BD Mode' to return.", icon: '💼' },
-    { title: 'Pipeline & Leads', body: "Full visibility across all pipeline stages and all reps for whichever entity you've selected.", icon: '🏗️', highlight: '/pipeline' },
-    { title: 'Ask AI', body: "Use AI for market summaries, competitive analysis, or drafting comms. Set your AI key in Settings.", icon: '✨', highlight: '/ask-ai' },
+    {
+      title: 'Welcome, CEO',
+      body: "You have holding-level visibility across Egypt and KSA. This tour covers your key dashboards and controls.",
+    },
+    {
+      title: 'Holding Dashboard',
+      body: "Switch between EG, KSA, and Holding views using the toggle in the left sidebar. Holding shows both markets side-by-side.",
+      highlight: '/dashboard/executive',
+    },
+    {
+      title: 'BD Working Mode',
+      body: "Click 'Work as BD' in the sidebar to switch into a rep-style view for your own leads. Your executive access is preserved — click 'Exit BD Mode' to return.",
+    },
+    {
+      title: 'Pipeline and Leads',
+      body: "Full visibility across all pipeline stages and all reps for whichever entity you have selected.",
+      highlight: '/pipeline',
+    },
+    {
+      title: 'Ask AI',
+      body: "Use AI for market summaries, competitive analysis, or drafting comms. Set your AI key in Settings.",
+      highlight: '/ask-ai',
+    },
   ],
   coo: [
-    { title: 'Welcome, COO 👋', body: "You have full operational visibility across both markets. This tour covers your dashboards and working modes.", icon: '⚙️' },
-    { title: 'Executive Dashboard', body: "Switch between Egypt, KSA, and Holding using the entity toggle in the sidebar. Each view shows KPIs and team performance.", icon: '📊', highlight: '/dashboard/executive' },
-    { title: 'BD Working Mode', body: "Toggle 'Work as BD' to use the CRM as a rep — useful for your own deals. Click 'Exit BD Mode' to return to executive view.", icon: '💼' },
-    { title: 'Accounts', body: "Accounts lists all active clients. Use it to track renewals and monitor account health.", icon: '🏢', highlight: '/accounts' },
+    {
+      title: 'Welcome, COO',
+      body: "You have full operational visibility across both markets. This tour covers your dashboards and working modes.",
+    },
+    {
+      title: 'Executive Dashboard',
+      body: "Switch between Egypt, KSA, and Holding using the entity toggle in the sidebar. Each view shows KPIs and team performance.",
+      highlight: '/dashboard/executive',
+    },
+    {
+      title: 'BD Working Mode',
+      body: "Toggle 'Work as BD' to use the CRM as a rep — useful for your own deals. Click 'Exit BD Mode' to return to executive view.",
+    },
+    {
+      title: 'Accounts',
+      body: "Accounts lists all active clients. Use it to track renewals and monitor account health.",
+      highlight: '/accounts',
+    },
   ],
   bd_tl: [
-    { title: 'Welcome, Team Lead 👋', body: "You have visibility across your team's leads and can manage rep performance. This tour covers your key pages.", icon: '👑' },
-    { title: 'CCO Dashboard', body: "Your dashboard shows team performance, stage breakdown, and overdue actions for your reps.", icon: '📊', highlight: '/dashboard/cco' },
-    { title: 'Pipeline', body: "See all team leads on the Kanban. Use the rep filter dropdown to focus on one rep at a time.", icon: '🏗️', highlight: '/pipeline' },
-    { title: 'Reconnect Queue', body: "Leads that have gone cold or need follow-up. Review daily and push reps to re-engage.", icon: '🔁', highlight: '/reconnect' },
+    {
+      title: 'Welcome, Team Lead',
+      body: "You have visibility across your team's leads and can manage rep performance. This tour covers your key pages.",
+    },
+    {
+      title: 'CCO Dashboard',
+      body: "Your dashboard shows team performance, stage breakdown, and overdue actions for your reps.",
+      highlight: '/dashboard/cco',
+    },
+    {
+      title: 'Pipeline',
+      body: "See all team leads on the Kanban. Use the rep filter dropdown to focus on one rep at a time.",
+      highlight: '/pipeline',
+    },
+    {
+      title: 'Reconnect Queue',
+      body: "Leads that have gone cold or need follow-up. Review daily and push reps to re-engage.",
+      highlight: '/reconnect',
+    },
   ],
   bd_rep: [
-    { title: 'Welcome to Mrkoon CRM 👋', body: "This is your home for managing leads, tracking pipeline progress, and logging every interaction.", icon: '🚀' },
-    { title: 'Your Dashboard', body: "See your pipeline at a glance — total leads, active stages, next actions due today, and recent activity.", icon: '📊', highlight: '/dashboard/bd' },
-    { title: 'Pipeline Board', body: "Drag leads through stages as you progress. Click any card to log a call, note, or meeting, and update the next action.", icon: '🏗️', highlight: '/pipeline' },
-    { title: 'Logging Activities', body: "Every call, meeting, and WhatsApp should be logged. Open the lead panel → Log Activity. This builds your history and triggers reconnect reminders.", icon: '📝' },
-    { title: 'Reconnect Queue', body: "Leads you haven't touched in a while appear here. Work through this queue daily to keep your pipeline alive.", icon: '🔁', highlight: '/reconnect' },
-    { title: 'Calendar', body: "Schedule meetings and set next action dates on leads. Sync with Google Calendar in Settings.", icon: '📅', highlight: '/calendar' },
+    {
+      title: 'Welcome to Mrkoon CRM',
+      body: "This is your home for managing leads, tracking pipeline progress, and logging every interaction.",
+    },
+    {
+      title: 'Your Dashboard',
+      body: "See your pipeline at a glance — total leads, active stages, next actions due today, and recent activity.",
+      highlight: '/dashboard/bd',
+    },
+    {
+      title: 'Pipeline Board',
+      body: "Drag leads through stages as you progress. Click any card to log a call, note, or meeting, and update the next action.",
+      highlight: '/pipeline',
+    },
+    {
+      title: 'Logging Activities',
+      body: "Every call, meeting, and WhatsApp should be logged. Open the lead panel, then Log Activity. This builds your history and triggers reconnect reminders.",
+    },
+    {
+      title: 'Reconnect Queue',
+      body: "Leads you have not touched in a while appear here. Work through this queue daily to keep your pipeline alive.",
+      highlight: '/reconnect',
+    },
+    {
+      title: 'Calendar',
+      body: "Schedule meetings and set next action dates on leads. Sync with Google Calendar in Settings.",
+      highlight: '/calendar',
+    },
   ],
   bd_am: [
-    { title: 'Welcome, Account Manager 👋', body: "Your focus is client retention and renewals. This tour covers the pages you'll use most.", icon: '🤝' },
-    { title: 'AM Dashboard', body: "Your dashboard shows active clients, upcoming renewals, and accounts needing attention.", icon: '📊', highlight: '/dashboard/am' },
-    { title: 'Accounts', body: "All your active clients in one place. Click any account to view history, log interactions, and track renewal status.", icon: '🏢', highlight: '/accounts' },
-    { title: 'Reconnect Queue', body: "Clients who haven't been contacted recently. Review daily — proactive outreach prevents churn.", icon: '🔁', highlight: '/reconnect' },
-    { title: 'Calendar', body: "Schedule QBRs, renewal calls, and client check-ins. All meeting notes are logged to the account.", icon: '📅', highlight: '/calendar' },
+    {
+      title: 'Welcome, Account Manager',
+      body: "Your focus is client retention and renewals. This tour covers the pages you will use most.",
+    },
+    {
+      title: 'AM Dashboard',
+      body: "Your dashboard shows active clients, upcoming renewals, and accounts needing attention.",
+      highlight: '/dashboard/am',
+    },
+    {
+      title: 'Accounts',
+      body: "All your active clients in one place. Click any account to view history, log interactions, and track renewal status.",
+      highlight: '/accounts',
+    },
+    {
+      title: 'Reconnect Queue',
+      body: "Clients who have not been contacted recently. Review daily — proactive outreach prevents churn.",
+      highlight: '/reconnect',
+    },
+    {
+      title: 'Calendar',
+      body: "Schedule QBRs, renewal calls, and client check-ins. All meeting notes are logged to the account.",
+      highlight: '/calendar',
+    },
   ],
 }
 
@@ -87,7 +199,7 @@ export default function OnboardingTour({ role, onClose }) {
         {/* Progress bar */}
         <div style={{ height: '3px', background: 'var(--bg-elevated)' }}>
           <div style={{
-            height: '3px', width: `${progress}%`,
+            height: '3px', width: progress + '%',
             background: 'var(--brand-green)',
             transition: 'width .3s ease',
           }} />
@@ -105,7 +217,6 @@ export default function OnboardingTour({ role, onClose }) {
 
         {/* Body */}
         <div style={{ padding: '12px 24px 24px' }}>
-          <div style={{ fontSize: '36px', marginBottom: '12px' }}>{current.icon}</div>
           <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '10px', lineHeight: 1.3 }}>
             {current.title}
           </h2>
