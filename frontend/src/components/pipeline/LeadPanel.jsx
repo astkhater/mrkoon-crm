@@ -10,6 +10,7 @@ import { useAuth }     from '@/contexts/AuthContext'
 import { useApp }      from '@/contexts/AppContext'
 import { formatDate, formatEGP } from '@/lib/i18n'
 
+// ── Constants ─────────────────────────────────────────────────
 const ALL_PIPELINE_STAGES = [
   'new_lead', 'reaching_out', 'no_response', 'meeting_done',
   'negotiation', 'prospect_active', 'prospect_cold', 'reconnect',
@@ -39,6 +40,7 @@ const ACTIVITY_ICONS = {
   email: '✉️', document: '📄', stage_change: '🔄', status_change: '🔁', sna_alert: '⚠️',
 }
 
+// ── Data hooks ────────────────────────────────────────────────
 function useLead(leadId) {
   return useQuery({
     queryKey: ['lead', leadId],
@@ -72,6 +74,7 @@ function useActivities(leadId) {
   })
 }
 
+// ── Sub-components ────────────────────────────────────────────
 function InfoRow({ label, value, icon: Icon, alert }) {
   if (!value) return null
   return (
@@ -95,29 +98,34 @@ function ActivityItem({ activity, lang }) {
         {ACTIVITY_ICONS[activity.action_type] ?? '•'}
       </span>
       <div style={{ flex: 1, minWidth: 0 }}>
+        {/* Stage change */}
         {activity.stage_from && activity.stage_to && (
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>
-            {t(`stage.${activity.stage_from}`)} → {t(`stage.${activity.stage_to}`)}
+            {t('stage.' + activity.stage_from) + ' → ' + t('stage.' + activity.stage_to)}
           </div>
         )}
+        {/* Body */}
         {activity.body && (
           <div style={{ fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.5, wordBreak: 'break-word' }}>
             {activity.body}
           </div>
         )}
+        {/* Contact */}
         {activity.contact_person && (
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px' }}>
-            with {activity.contact_person}{activity.contact_title ? `, ${activity.contact_title}` : ''}
+            {'with ' + activity.contact_person + (activity.contact_title ? ', ' + activity.contact_title : '')}
           </div>
         )}
+        {/* Meta */}
         <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>
-          {activity.profiles?.full_name} · {formatDate(activity.created_at, lang)}
+          {(activity.profiles?.full_name ?? '') + ' · ' + formatDate(activity.created_at, lang)}
         </div>
       </div>
     </div>
   )
 }
 
+// ── Main component ────────────────────────────────────────────
 export default function LeadPanel({ leadId, onClose }) {
   const { t, lang, toast } = useApp()
   const { userId }         = useAuth()
@@ -139,6 +147,7 @@ export default function LeadPanel({ leadId, onClose }) {
     ? Math.round(lead.estimated_gmv_month * lead.deal_success_rate / 100)
     : null
 
+  // ── Stage change ──────────────────────────────────────────
   async function changeStage(newStage) {
     const { error } = await supabase.from('leads').update({ stage: newStage }).eq('id', leadId)
     if (error) { toast(error.message, 'error'); return }
@@ -149,6 +158,7 @@ export default function LeadPanel({ leadId, onClose }) {
     toast('Stage updated', 'success')
   }
 
+  // ── Save deal value ───────────────────────────────────────
   async function saveDealValue() {
     const val = parseFloat(dealValueInput)
     if (isNaN(val) && dealValueInput.trim() !== '') return
@@ -161,6 +171,7 @@ export default function LeadPanel({ leadId, onClose }) {
     toast('Deal value saved', 'success')
   }
 
+  // ── Log activity ───────────────────────────────────────────
   async function handleLogActivity(e) {
     e.preventDefault()
     if (!actBody.trim()) return
@@ -204,7 +215,7 @@ export default function LeadPanel({ leadId, onClose }) {
           </div>
         ) : (
           <>
-            {/* Header */}
+            {/* ── Header ─────────────────────────────────── */}
             <div style={{
               padding: '14px 18px', flexShrink: 0,
               borderBottom: '1px solid var(--border-default)',
@@ -215,18 +226,19 @@ export default function LeadPanel({ leadId, onClose }) {
                   <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px', lineHeight: 1.3 }}>
                     {lead.company_name}
                   </div>
+                  {/* Stage selector */}
                   <div style={{ position: 'relative', display: 'inline-block' }}>
                     <button
                       onClick={() => setShowStageMenu(v => !v)}
                       style={{
                         display: 'flex', alignItems: 'center', gap: '5px',
                         padding: '3px 8px', borderRadius: '5px', border: 'none', cursor: 'pointer',
-                        background: `${STAGE_COLORS[lead.stage] ?? '#64748b'}22`,
+                        background: (STAGE_COLORS[lead.stage] ?? '#64748b') + '22',
                         color: STAGE_COLORS[lead.stage] ?? '#64748b',
                         fontSize: '11px', fontWeight: 700,
                       }}
                     >
-                      {t(`stage.${lead.stage}`)}
+                      {t('stage.' + lead.stage)}
                       <ChevronDown size={10} />
                     </button>
 
@@ -250,7 +262,7 @@ export default function LeadPanel({ leadId, onClose }) {
                               fontSize: '12px', fontWeight: stage === lead.stage ? 700 : 400,
                             }}
                           >
-                            {t(`stage.${stage}`)}
+                            {t('stage.' + stage)}
                           </button>
                         ))}
                       </div>
@@ -263,12 +275,13 @@ export default function LeadPanel({ leadId, onClose }) {
               </div>
             </div>
 
-            {/* Scrollable body */}
+            {/* ── Scrollable body ─────────────────────────── */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 18px' }}>
 
+              {/* Info grid */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 20px', marginBottom: '16px' }}>
                 <InfoRow label="Assigned To" value={lead.profiles?.full_name} icon={User} />
-                <InfoRow label="Source"      value={t(`source.${lead.lead_source ?? 'unknown'}`)} />
+                <InfoRow label="Source"      value={t('source.' + (lead.lead_source ?? 'unknown'))} />
                 <InfoRow label="Contact"     value={lead.contact_name}  icon={User} />
                 <InfoRow label="Title"       value={lead.contact_title} />
                 <InfoRow label="Phone"       value={lead.phone} icon={Phone} />
@@ -278,7 +291,7 @@ export default function LeadPanel({ leadId, onClose }) {
                 {lead.next_action_date && (
                   <InfoRow
                     label="Next Action"
-                    value={`${formatDate(lead.next_action_date, lang)}${lead.next_action ? ' — ' + lead.next_action : ''}`}
+                    value={formatDate(lead.next_action_date, lang) + (lead.next_action ? ' — ' + lead.next_action : '')}
                     icon={Calendar}
                     alert={new Date(lead.next_action_date) < new Date()}
                   />
@@ -315,7 +328,7 @@ export default function LeadPanel({ leadId, onClose }) {
                       </div>
                     </div>
                   )}
-                  {/* Deal value — always shown, editable */}
+                  {/* Deal value always shown, editable */}
                   <div>
                     <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '2px' }}>
                       Deal Value
@@ -368,17 +381,19 @@ export default function LeadPanel({ leadId, onClose }) {
                   Log Activity
                 </div>
                 <form onSubmit={handleLogActivity}>
+                  {/* Type tabs */}
                   <div style={{ display: 'flex', gap: '5px', marginBottom: '10px', flexWrap: 'wrap' }}>
                     {ACTIVITY_TYPES.map(({ key, icon }) => (
                       <button key={key} type="button"
                         onClick={() => setActType(key)}
-                        className={`btn btn-xs ${actType === key ? 'btn-primary' : 'btn-secondary'}`}
+                        className={'btn btn-xs ' + (actType === key ? 'btn-primary' : 'btn-secondary')}
                       >
-                        {icon} {key.replace('_', ' ')}
+                        {icon + ' ' + key.replace('_', ' ')}
                       </button>
                     ))}
                   </div>
 
+                  {/* Contact row */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                     <input
                       className="crm-input"
@@ -396,9 +411,10 @@ export default function LeadPanel({ leadId, onClose }) {
                     />
                   </div>
 
+                  {/* Body */}
                   <textarea
                     className="crm-input"
-                    placeholder={`${actType.replace('_', ' ')} notes...`}
+                    placeholder={actType.replace('_', ' ') + ' notes...'}
                     value={actBody}
                     onChange={e => setActBody(e.target.value)}
                     rows={3}
@@ -415,7 +431,7 @@ export default function LeadPanel({ leadId, onClose }) {
               {/* Activity log */}
               <div>
                 <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
-                  Activity Log ({activities.length})
+                  {'Activity Log (' + activities.length + ')'}
                 </div>
                 {activities.length === 0 ? (
                   <div style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center', padding: '20px 0' }}>
