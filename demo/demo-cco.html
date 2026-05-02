@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mrkoon CRM — CCO Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg-base:#0a0a0f;--bg-surface:#12121a;--bg-elevated:#1a1a26;--bg-card:#1e1e2e;--brand-green:#22c55e;--brand-cyan:#22d3ee;--brand-green-dim:rgba(34,197,94,.12);--text-primary:#f1f5f9;--text-secondary:#94a3b8;--text-muted:#64748b;--border:rgba(255,255,255,.07);--danger:#ef4444;--warning:#f59e0b;--sidebar-w:220px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--bg-base);color:var(--text-primary);display:flex;height:100vh;overflow:hidden}
+.sidebar{width:var(--sidebar-w);background:var(--bg-surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-logo{padding:20px 18px 16px;border-bottom:1px solid var(--border)}
+.logo-text{font-size:18px;font-weight:800;color:var(--brand-green);letter-spacing:-.5px}
+.logo-sub{font-size:10px;color:var(--text-muted);margin-top:1px}
+.demo-badge{display:inline-block;margin-top:6px;padding:2px 7px;background:rgba(245,158,11,.15);color:var(--warning);border:1px solid rgba(245,158,11,.3);border-radius:4px;font-size:10px;font-weight:700}
+.nav-section{padding:12px 10px 6px}
+.nav-label{font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:.8px;text-transform:uppercase;padding:0 8px;margin-bottom:4px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;cursor:pointer;font-size:13px;color:var(--text-secondary);font-weight:500;margin-bottom:2px;transition:all .15s}
+.nav-item:hover,.nav-item.active{background:var(--bg-elevated);color:var(--text-primary)}
+.nav-item.active{background:var(--brand-green-dim);color:var(--brand-green);font-weight:600}
+.nav-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0}
+.sidebar-footer{margin-top:auto;padding:14px 18px;border-top:1px solid var(--border)}
+.u-avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;background:linear-gradient(135deg,#7c3aed,#a78bfa)}
+.u-name{font-size:12px;font-weight:600;color:var(--text-primary)}
+.u-role{font-size:10px;color:var(--text-muted)}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:52px;background:var(--bg-surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;flex-shrink:0}
+.topbar-title{font-size:15px;font-weight:700;color:var(--text-primary)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.entity-badge{padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;background:rgba(34,197,94,.1);color:var(--brand-green);border:1px solid rgba(34,197,94,.25)}
+.page-content{flex:1;overflow-y:auto;padding:24px}
+.kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:22px}
+.kpi-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.kpi-label{font-size:11px;color:var(--text-muted);margin-bottom:5px;font-weight:500}
+.kpi-value{font-size:24px;font-weight:800;line-height:1}
+.kpi-alert{font-size:11px;color:var(--danger);margin-top:4px;font-weight:600}
+.kpi-sub{font-size:11px;color:var(--text-secondary);margin-top:4px}
+.crm-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px}
+.card-header{padding:14px 18px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:14px;font-weight:700;color:var(--text-primary)}
+.content-grid{display:grid;grid-template-columns:1fr 360px;gap:16px}
+.rep-table{width:100%;border-collapse:collapse}
+.rep-table th{padding:9px 16px;text-align:left;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border)}
+.rep-table td{padding:11px 16px;font-size:13px;border-bottom:1px solid var(--border)}
+.rep-table tr:last-child td{border-bottom:none}
+.rep-table tr:hover td{background:var(--bg-elevated)}
+.rep-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+.rep-name-cell{display:flex;align-items:center;gap:9px}
+.sna-badge{display:inline-block;padding:2px 7px;border-radius:12px;font-size:11px;font-weight:700}
+.sna-breach{background:rgba(239,68,68,.15);color:var(--danger);animation:pulse 2s infinite}
+.sna-ok{background:rgba(34,197,94,.1);color:var(--brand-green)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.action-item{padding:11px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:9px;cursor:pointer;transition:background .12s}
+.action-item:hover{background:var(--bg-elevated)}
+.action-item:last-child{border-bottom:none}
+.adot{width:8px;height:8px;border-radius:50%;margin-top:4px;flex-shrink:0}
+.adot.overdue{background:var(--danger);animation:pulse 2s infinite}
+.adot.today{background:var(--warning)}
+.adot.ok{background:var(--brand-green)}
+.pool-item{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)}
+.pool-item:last-child{border-bottom:none}
+.stage-row{padding:7px 16px;display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--border)}
+.stage-row:last-child{border-bottom:none}
+.stage-name{font-size:12px;color:var(--text-secondary);width:130px;flex-shrink:0;text-transform:capitalize}
+.stage-bar-bg{flex:1;height:5px;background:var(--bg-elevated);border-radius:3px}
+.stage-bar-fill{height:5px;border-radius:3px;transition:width .5s ease}
+.stage-cnt{font-size:12px;font-weight:700;color:var(--text-primary);width:22px;text-align:right;flex-shrink:0}
+/* tour */
+.tour-intro{display:none;position:fixed;inset:0;z-index:1000;background:linear-gradient(135deg,#050508,#0d0d1a,#050508);align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:40px}
+.tour-intro.active{display:flex}
+.ti-brand{font-size:30px;font-weight:800;color:var(--brand-green);letter-spacing:-1px;margin-bottom:6px}
+.ti-role{display:inline-block;padding:3px 12px;background:var(--brand-green-dim);border:1px solid rgba(34,197,94,.3);color:var(--brand-green);border-radius:20px;font-size:12px;font-weight:700;margin-bottom:22px}
+.ti-headline{font-size:22px;font-weight:800;color:var(--text-primary);margin-bottom:10px;line-height:1.3}
+.ti-sub{font-size:14px;color:var(--text-muted);max-width:420px;margin:0 auto 28px}
+.ti-steps{display:flex;gap:14px;margin-bottom:28px;justify-content:center;flex-wrap:wrap}
+.ti-step{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:11px 16px;min-width:110px;text-align:left}
+.ti-step-num{font-size:10px;font-weight:700;color:var(--brand-green);margin-bottom:3px}
+.ti-step-label{font-size:12px;font-weight:600;color:var(--text-primary)}
+.ti-btn{padding:13px 40px;background:var(--brand-green);border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;animation:glow 2s ease-in-out infinite}
+@keyframes glow{0%,100%{box-shadow:0 0 20px rgba(34,197,94,.2)}50%{box-shadow:0 0 40px rgba(34,197,94,.5)}}
+.ti-skip{margin-top:12px;background:none;border:none;color:var(--text-muted);font-family:inherit;font-size:12px;cursor:pointer}
+.tour-overlay{display:none;position:fixed;inset:0;z-index:800;pointer-events:none}
+.tour-overlay.active{display:block}
+.tour-spotlight{position:fixed;border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.62),0 0 0 2px var(--brand-green),0 0 24px rgba(34,197,94,.4);transition:all .5s cubic-bezier(.4,0,.2,1);pointer-events:none;z-index:801}
+.tour-card{position:fixed;z-index:802;background:#14141f;border:1px solid rgba(34,197,94,.35);border-radius:14px;padding:20px 22px;max-width:350px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.6);transition:opacity .3s,transform .3s;opacity:0;transform:translateY(10px)}
+.tour-card.visible{opacity:1;transform:translateY(0)}
+.tc-badge{display:inline-block;padding:3px 9px;background:var(--brand-green-dim);border:1px solid rgba(34,197,94,.3);color:var(--brand-green);border-radius:20px;font-size:10px;font-weight:700;margin-bottom:9px}
+.tour-card h3{font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:7px}
+.tour-card p{font-size:13px;color:var(--text-secondary);line-height:1.7;margin-bottom:14px}
+.tour-card p strong{color:var(--brand-green)}
+.tc-nav{display:flex;justify-content:space-between;align-items:center}
+.tc-dots{display:flex;gap:5px}
+.tc-dot{width:6px;height:6px;border-radius:50%;background:var(--bg-elevated);transition:all .3s}
+.tc-dot.active{background:var(--brand-green);width:18px;border-radius:4px}
+.tc-dot.done{background:rgba(34,197,94,.35)}
+.tc-btns{display:flex;gap:7px}
+.tc-skip{padding:6px 14px;border-radius:6px;background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+.tc-next{padding:6px 16px;border-radius:6px;background:var(--brand-green);border:none;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+</style>
+</head>
+<body>
+
+<!-- TOUR INTRO -->
+<div class="tour-intro active" id="tourIntro">
+  <div class="ti-brand">مركون CRM</div>
+  <div class="ti-role">CCO — Chief Commercial Officer</div>
+  <div class="ti-headline">Your team, your pipeline,<br>one view</div>
+  <div class="ti-sub">Walk through how you monitor the full commercial team — KPIs, SNA breaches, rep performance, and the pool.</div>
+  <div class="ti-steps">
+    <div class="ti-step"><div class="ti-step-num">01</div><div class="ti-step-label">Team KPIs</div></div>
+    <div class="ti-step"><div class="ti-step-num">02</div><div class="ti-step-label">SNA Alerts</div></div>
+    <div class="ti-step"><div class="ti-step-num">03</div><div class="ti-step-label">Rep Performance</div></div>
+    <div class="ti-step"><div class="ti-step-num">04</div><div class="ti-step-label">Actions Queue</div></div>
+    <div class="ti-step"><div class="ti-step-num">05</div><div class="ti-step-label">Lead Pool</div></div>
+  </div>
+  <button class="ti-btn" onclick="startTour()">Start Walkthrough</button>
+  <button class="ti-skip" onclick="skipTour()">Skip — go straight to demo</button>
+</div>
+
+<div class="tour-overlay" id="tourOverlay"></div>
+<div class="tour-spotlight" id="tourSpotlight" style="display:none"></div>
+<div class="tour-card" id="tourCard">
+  <div class="tc-badge" id="tcBadge">Step 1 of 7</div>
+  <h3 id="tcTitle"></h3>
+  <p id="tcText"></p>
+  <div class="tc-nav">
+    <div class="tc-dots" id="tcDots"></div>
+    <div class="tc-btns">
+      <button class="tc-skip" onclick="skipTour()">Skip</button>
+      <button class="tc-next" id="tcNext" onclick="nextStep()">Next</button>
+    </div>
+  </div>
+</div>
+
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-text">مركون</div>
+    <div class="logo-sub">Commercial CRM</div>
+    <div class="demo-badge">DEMO MODE</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Overview</div>
+    <div class="nav-item active" id="nav-dashboard"><div class="nav-dot"></div>Dashboard</div>
+    <div class="nav-item"><div class="nav-dot"></div>Pipeline</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Management</div>
+    <div class="nav-item"><div class="nav-dot"></div>Team</div>
+    <div class="nav-item"><div class="nav-dot"></div>Pool</div>
+    <div class="nav-item"><div class="nav-dot"></div>Reports</div>
+  </div>
+  <div class="sidebar-footer">
+    <div style="display:flex;align-items:center;gap:9px">
+      <div class="u-avatar">S</div>
+      <div><div class="u-name">Sara</div><div class="u-role">CCO · Egypt</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title">CCO Dashboard</div>
+    <div class="topbar-right">
+      <div class="entity-badge">EG Entity</div>
+    </div>
+  </div>
+
+  <div class="page-content">
+    <!-- KPI row -->
+    <div class="kpi-row" id="kpiRow">
+      <div class="kpi-card"><div class="kpi-label">Total Leads</div><div class="kpi-value" style="color:var(--text-primary)">47</div><div class="kpi-sub">EG pipeline</div></div>
+      <div class="kpi-card"><div class="kpi-label">Active Pipeline</div><div class="kpi-value" style="color:var(--brand-cyan)">18</div><div class="kpi-sub">Meeting to renewal</div></div>
+      <div class="kpi-card"><div class="kpi-label">Active Clients</div><div class="kpi-value" style="color:#a78bfa">9</div><div class="kpi-sub">Client active + renewal</div></div>
+      <div class="kpi-card"><div class="kpi-label">Weighted GMV</div><div class="kpi-value" style="color:var(--brand-green)" id="wgmv">142K</div><div class="kpi-sub">EGP pipeline-weighted</div></div>
+      <div class="kpi-card" id="snaCard"><div class="kpi-label">SNA Breaches</div><div class="kpi-value" style="color:var(--danger)" id="snaCnt">3</div><div class="kpi-alert">Needs review</div></div>
+      <div class="kpi-card"><div class="kpi-label">Actions Due</div><div class="kpi-value" style="color:var(--warning)">5</div><div class="kpi-sub">Today + overdue</div></div>
+    </div>
+
+    <div class="content-grid">
+      <div>
+        <!-- Rep table -->
+        <div class="crm-card" id="repTable" style="margin-bottom:16px">
+          <div class="card-header"><div class="card-title">Team Performance</div><span style="font-size:11px;color:var(--text-muted)">Egypt BD Team</span></div>
+          <table class="rep-table">
+            <thead><tr><th>Rep</th><th>Active</th><th>SNA</th><th>Weighted GMV</th><th>Clients</th></tr></thead>
+            <tbody id="repTbody"></tbody>
+          </table>
+        </div>
+        <!-- Stage dist -->
+        <div class="crm-card" id="stageDist">
+          <div class="card-header"><div class="card-title">Pipeline by Stage</div></div>
+          <div id="stageRows"></div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <!-- Actions -->
+        <div class="crm-card" id="actionsCard">
+          <div class="card-header"><div class="card-title">Upcoming Actions</div><span style="font-size:11px;color:var(--text-muted)">All reps</span></div>
+          <div class="action-item"><div class="adot overdue"></div><div><div style="font-size:13px;font-weight:600;color:var(--text-primary)">Karabo Logistics</div><div style="font-size:11px;color:var(--text-muted)">Follow-up call — 2 days overdue · <strong style="color:var(--brand-cyan)">Salah</strong></div></div></div>
+          <div class="action-item"><div class="adot overdue"></div><div><div style="font-size:13px;font-weight:600;color:var(--text-primary)">El-Sharif Group</div><div style="font-size:11px;color:var(--text-muted)">Send proposal — overdue · <strong style="color:var(--brand-cyan)">Salah</strong></div></div></div>
+          <div class="action-item"><div class="adot today"></div><div><div style="font-size:13px;font-weight:600;color:var(--text-primary)">Delta Trade</div><div style="font-size:11px;color:var(--text-muted)">Discovery call — today · <strong style="color:var(--brand-green)">Yassin</strong></div></div></div>
+          <div class="action-item"><div class="adot ok"></div><div><div style="font-size:13px;font-weight:600;color:var(--text-primary)">Cairo Steel Co.</div><div style="font-size:11px;color:var(--text-muted)">Client check-in — tomorrow · <strong style="color:#a78bfa">Shams</strong></div></div></div>
+        </div>
+        <!-- Pool -->
+        <div class="crm-card" id="poolCard">
+          <div class="card-header"><div class="card-title">Unassigned Pool</div><span style="font-size:11px;color:var(--warning);font-weight:700">6 leads</span></div>
+          <div style="padding:12px 16px">
+            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px">Leads awaiting assignment</div>
+            <div id="poolList"></div>
+            <button onclick="alert('Opens full pool view in CRM')" style="margin-top:10px;width:100%;padding:8px;background:var(--brand-green-dim);border:1px solid rgba(34,197,94,.3);color:var(--brand-green);border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Assign Leads</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const REPS=[
+  {name:'Yassin',color:'#16a34a',active:7,sna:0,gmv:'58K',clients:4},
+  {name:'Salah',color:'#0e7490',active:6,sna:2,gmv:'51K',clients:3},
+  {name:'Shams',color:'#7c3aed',active:5,sna:1,gmv:'33K',clients:9},
+]
+const STAGES=[
+  {s:'client_active',c:7,color:'#22c55e'},{s:'prospect_active',c:6,color:'#22d3ee'},
+  {s:'negotiation',c:5,color:'#a78bfa'},{s:'meeting_done',c:5,color:'#f59e0b'},
+  {s:'reaching_out',c:9,color:'#64748b'},{s:'no_response',c:6,color:'#475569'},
+  {s:'client_renewal',c:2,color:'#7c3aed'},{s:'lost',c:3,color:'#ef4444'},
+]
+const POOL=[{n:'Apex Recycling',s:'new_lead'},{n:'Gulf Metals',s:'new_lead'},{n:'Horizon Fab.',s:'reaching_out'},{n:'Prime Scrap',s:'new_lead'},{n:'Al-Baraka',s:'new_lead'},{n:'Nile Casting',s:'reaching_out'}]
+const total=STAGES.reduce((a,s)=>a+s.c,0)
+
+// build rep table
+const tbody=document.getElementById('repTbody')
+REPS.forEach(r=>{
+  const tr=document.createElement('tr')
+  tr.innerHTML=`<td><div class="rep-name-cell"><div class="rep-avatar" style="background:${r.color}">${r.name[0]}</div><div><div style="font-weight:600">${r.name}</div></div></div></td>
+    <td style="color:var(--brand-cyan);font-weight:700">${r.active}</td>
+    <td><span class="sna-badge ${r.sna>0?'sna-breach':'sna-ok'}">${r.sna>0?r.sna+' breach':'OK'}</span></td>
+    <td style="color:var(--brand-green);font-weight:700">${r.gmv} EGP</td>
+    <td style="color:#a78bfa;font-weight:700">${r.clients}</td>`
+  tbody.appendChild(tr)
+})
+
+// build stage dist
+const stageRows=document.getElementById('stageRows')
+STAGES.forEach(s=>{
+  const pct=Math.round(s.c/total*100)
+  stageRows.innerHTML+=`<div class="stage-row"><div class="stage-name">${s.s.replace(/_/g,' ')}</div><div class="stage-bar-bg"><div class="stage-bar-fill" style="width:${pct}%;background:${s.color}"></div></div><div class="stage-cnt">${s.c}</div></div>`
+})
+
+// pool
+const poolList=document.getElementById('poolList')
+POOL.forEach(p=>{
+  poolList.innerHTML+=`<div class="pool-item"><div style="font-size:13px;color:var(--text-primary);font-weight:500">${p.n}</div><div style="font-size:11px;color:var(--text-muted)">${p.s.replace(/_/g,' ')}</div></div>`
+})
+
+// live SNA simulation
+let snaVal=3
+setInterval(()=>{
+  const el=document.getElementById('snaCnt')
+  // occasionally flash
+  el.style.color='rgba(239,68,68,.5)'
+  setTimeout(()=>{el.style.color='var(--danger)'},400)
+},9000)
+
+// tour
+const STEPS=[
+  {title:'Team KPIs at a glance',text:'Six numbers give you the full picture instantly. <strong>Weighted GMV</strong> is the most important — it\'s your forward-looking revenue signal.',target:'#kpiRow',pos:'bottom'},
+  {title:'SNA breaches need action now',text:'When a rep goes too long without logging activity, the <strong>SNA clock breaches</strong>. This card tells you who, and you can drill into it immediately.',target:'#snaCard',pos:'bottom'},
+  {title:'Rep performance table',text:'Each row is one rep — active leads, SNA count, GMV contribution, and clients. <strong>Sort mentally by SNA</strong>: breaches first, fix them.',target:'#repTable',pos:'right'},
+  {title:'Upcoming actions across all reps',text:'You see every rep\'s next action in one list. You can intervene, reassign, or coach directly from here without switching to each rep\'s view.',target:'#actionsCard',pos:'left'},
+  {title:'Unassigned pool',text:'Leads in the pool are burning time unassigned. From here you assign them directly to reps — or batch-assign based on capacity.',target:'#poolCard',pos:'left'},
+  {title:'Pipeline by stage',text:'The stage distribution shows you where leads are bunching up. A spike in <strong>no_response</strong> means reps need to push or disqualify.',target:'#stageDist',pos:'right'},
+  {title:'You\'re set',text:'That\'s the full CCO view. KPI cards catch issues fast, the rep table shows who\'s healthy, the actions queue and pool close the loop.',target:null,pos:'center'},
+]
+let step=-1
+const spotlight=document.getElementById('tourSpotlight'),card=document.getElementById('tourCard'),TOTAL=STEPS.length
+function startTour(){document.getElementById('tourIntro').classList.remove('active');document.getElementById('tourOverlay').classList.add('active');document.getElementById('tcDots').innerHTML=STEPS.map((_,i)=>'<div class="tc-dot" id="d'+i+'"></div>').join('');step=-1;nextStep()}
+function skipTour(){document.getElementById('tourIntro').classList.remove('active');document.getElementById('tourOverlay').classList.remove('active');spotlight.style.display='none';card.classList.remove('visible')}
+function nextStep(){
+  step++;if(step>=TOTAL){endTour();return}
+  const s=STEPS[step]
+  updateDots()
+  document.getElementById('tcBadge').textContent='Step '+(step+1)+' of '+TOTAL
+  document.getElementById('tcTitle').textContent=s.title
+  document.getElementById('tcText').innerHTML=s.text
+  document.getElementById('tcNext').textContent=step===TOTAL-1?'Finish':'Next'
+  card.classList.remove('visible')
+  setTimeout(()=>{
+    if(s.target){posSL(s.target,s.pos)}else{spotlight.style.display='none';posCardCenter()}
+    card.classList.add('visible')
+  },100)
+}
+function posSL(sel,pos){
+  const el=document.querySelector(sel);if(!el){spotlight.style.display='none';posCardCenter();return}
+  el.scrollIntoView({behavior:'smooth',block:'nearest'})
+  setTimeout(()=>{
+    const r=el.getBoundingClientRect(),pad=10
+    spotlight.style.cssText='display:block;position:fixed;top:'+(r.top-pad)+'px;left:'+(r.left-pad)+'px;width:'+(r.width+pad*2)+'px;height:'+(r.height+pad*2)+'px'
+    posCard(r,pos)
+  },320)
+}
+function posCard(r,pos){
+  const cw=350,vw=window.innerWidth,vh=window.innerHeight
+  let t,l
+  if(pos==='bottom'){t=r.bottom+16;l=Math.max(10,Math.min(r.left,vw-cw-10))}
+  else if(pos==='right'){t=Math.max(10,r.top);l=r.right+16}
+  else if(pos==='left'){t=Math.max(10,r.top);l=r.left-cw-16}
+  else{t=(vh-220)/2;l=(vw-cw)/2}
+  if(t+220>vh-10)t=vh-230;if(l<10)l=10;if(l+cw>vw-10)l=vw-cw-10
+  card.style.top=t+'px';card.style.left=l+'px'
+}
+function posCardCenter(){card.style.top=((window.innerHeight-220)/2)+'px';card.style.left=((window.innerWidth-350)/2)+'px'}
+function updateDots(){STEPS.forEach((_,i)=>{const d=document.getElementById('d'+i);if(!d)return;d.className='tc-dot'+(i===step?' active':i<step?' done':'')})}
+function endTour(){document.getElementById('tourOverlay').classList.remove('active');spotlight.style.display='none';card.classList.remove('visible')}
+</script>
+</body>
+</html>
