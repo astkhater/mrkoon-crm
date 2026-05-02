@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
-import { TrendingUp, Users, Briefcase, RefreshCw, Globe, ArrowUpRight } from 'lucide-react'
 
 const STAGES = [
   'new_lead','reaching_out','no_response','meeting_done','negotiation',
@@ -30,14 +29,14 @@ function StageBar({ label, count, total, color }) {
         <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{count}</span>
       </div>
       <div style={{ height: '5px', background: 'var(--bg-elevated)', borderRadius: '3px' }}>
-        <div style={{ height: '5px', width: `${pct}%`, background: color, borderRadius: '3px', transition: 'width .4s' }} />
+        <div style={{ height: '5px', width: pct + '%', background: color, borderRadius: '3px', transition: 'width .4s' }} />
       </div>
     </div>
   )
 }
 
 export default function ExecutiveDashboard() {
-  const { entityView, isCEO, isCOO, isCCO, profile } = useAuth()
+  const { entityView, isCEO, isCOO, isCCO } = useAuth()
   const [data,    setData]    = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -63,12 +62,12 @@ export default function ExecutiveDashboard() {
     </div>
   )
 
-  const leads   = data?.leads ?? []
+  const leads    = data?.leads ?? []
   const profiles = data?.profiles ?? []
-  const total   = leads.length
-  const active  = leads.filter(l => ACTIVE_STAGES.includes(l.stage)).length
-  const clients = leads.filter(l => CLIENT_STAGES.includes(l.stage)).length
-  const lost    = leads.filter(l => l.stage === 'lost').length
+  const total    = leads.length
+  const active   = leads.filter(l => ACTIVE_STAGES.includes(l.stage)).length
+  const clients  = leads.filter(l => CLIENT_STAGES.includes(l.stage)).length
+  const lost     = leads.filter(l => l.stage === 'lost').length
 
   const stageCounts = {}
   STAGES.forEach(s => { stageCounts[s] = leads.filter(l => l.stage === s).length })
@@ -92,13 +91,16 @@ export default function ExecutiveDashboard() {
     : entityView === 'EG' ? 'Egypt Portfolio'
     : 'KSA Portfolio'
 
+  const roleLabel = isCEO ? 'CEO' : isCOO ? 'COO' : 'CCO'
+  const entityLabel = entityView === 'holding' ? 'All entities combined' : entityView + ' entity'
+
   return (
     <div className="page-content">
       <div className="page-header">
         <div>
           <h1 className="page-title">{viewTitle}</h1>
           <p className="page-subtitle" style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-            {isCEO ? 'CEO' : isCOO ? 'COO' : 'CCO'} view · {entityView === 'holding' ? 'All entities combined' : `${entityView} entity`}
+            {roleLabel} view · {entityLabel}
           </p>
         </div>
       </div>
@@ -162,8 +164,8 @@ export default function ExecutiveDashboard() {
       ) : (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px', marginBottom: '24px' }}>
-            <KpiCard label="Total Leads"    value={total}   sub={`${entityView} entity`} />
-            <KpiCard label="Active Pipeline" value={active}  sub="Meeting → Negotiation" color="var(--brand-cyan)" />
+            <KpiCard label="Total Leads"     value={total}   sub={entityView + ' entity'} />
+            <KpiCard label="Active Pipeline" value={active}  sub="Meeting to Negotiation" color="var(--brand-cyan)" />
             <KpiCard label="Active Clients"  value={clients} sub="Client active + renewal" color="#a78bfa" />
             <KpiCard label="Lost"            value={lost}    sub="Closed lost" color="var(--danger)" />
           </div>
@@ -186,7 +188,7 @@ export default function ExecutiveDashboard() {
                     {r.name[0]}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', truncate: true }}>{r.name}</div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{r.name}</div>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{r.total} leads · {r.active} active · {r.clients} clients</div>
                   </div>
                   <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--brand-cyan)' }}>{r.active}</div>
