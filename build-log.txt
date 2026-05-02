@@ -1,0 +1,17 @@
+MRKOON BD CRM — BUILD LOG
+=========================
+Every completed step is logged here permanently. Never deleted, never modified after entry.
+Format: [DATE] [SESSION] [STEP] — Description
+=========================
+
+[2026-05-02] [CRM-S6] [STEP-26] — Task #42 complete: created staging branch on GitHub repo astkhater/mrkoon-crm via GitHub Contents API (POST /git/refs, 201). Branch is exact copy of main at time of creation. To activate Vercel staging: Settings > Git > add staging to branch deployments.
+
+[2026-05-02] [CRM-S6] [STEP-25] — Task #40 complete (v2): rebuilt all 4 demo files with guided tours and live simulation. Borsa Kharda pattern: intro screen + spotlight overlay + tour card with progress dots. Names corrected to first-name only (Yassin, Salah, Shams). 8-step BD tour with auto-simulation (types+logs a call); 7-step CCO; 6-step AM; 7-step exec with live market switching. Files: demo/demo-bd.html, demo/demo-cco.html, demo/demo-am.html, demo/demo-exec.html.
+
+[2026-05-02] [CRM-S6] [STEP-24] — Emoji + template literal cleanup across all frontend source files. 6 files cleaned and pushed (all 200). Zero emoji patterns remain in frontend/src (grep confirmed). Vercel auto-deployed.
+
+[2026-05-02] [CRM-S5] [STEP-23] — Full React source push + Supabase migrations 003+004. All missing React source files pushed via GitHub Contents API. Vercel builds from source (Vite 5). Migrations: audit_log table, deal_value on leads, notifications table, tags[] on leads, pg_cron overdue notifications job.
+
+[2026-05-02] [CRM-S5] [STEP-22] — Autonomous session. Admin panel, executive dashboard, CCO dashboard, AM navigation, onboarding tour, gap features (deal value, bulk actions, search, tags, notifications) all written. RLS admin policy executed in Supabase.
+
+[2026-05-01] [CRM-S4] [STEP-19] — Pool UI rename deployed. Vite build + GitHub push + Vercel auto-deploy. sheets-sync edge function deployed to Supabase.
