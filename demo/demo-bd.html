@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mrkoon CRM — BD Rep Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-base:#0a0a0f;--bg-surface:#12121a;--bg-elevated:#1a1a26;--bg-card:#1e1e2e;
+  --brand-green:#22c55e;--brand-cyan:#22d3ee;
+  --brand-green-dim:rgba(34,197,94,.12);--brand-cyan-dim:rgba(34,211,238,.12);
+  --text-primary:#f1f5f9;--text-secondary:#94a3b8;--text-muted:#64748b;
+  --border:rgba(255,255,255,.07);--danger:#ef4444;--warning:#f59e0b;--sidebar-w:220px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--bg-base);color:var(--text-primary);display:flex;height:100vh;overflow:hidden}
+.sidebar{width:var(--sidebar-w);background:var(--bg-surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-logo{padding:20px 18px 16px;border-bottom:1px solid var(--border)}
+.logo-text{font-size:18px;font-weight:800;color:var(--brand-green);letter-spacing:-.5px}
+.logo-sub{font-size:10px;color:var(--text-muted);margin-top:1px}
+.demo-badge{display:inline-block;margin-top:6px;padding:2px 7px;background:rgba(245,158,11,.15);color:var(--warning);border:1px solid rgba(245,158,11,.3);border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.5px}
+.nav-section{padding:12px 10px 6px}
+.nav-label{font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:.8px;text-transform:uppercase;padding:0 8px;margin-bottom:4px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;cursor:pointer;font-size:13px;color:var(--text-secondary);font-weight:500;margin-bottom:2px;transition:all .15s}
+.nav-item:hover,.nav-item.active{background:var(--bg-elevated);color:var(--text-primary)}
+.nav-item.active{background:var(--brand-green-dim);color:var(--brand-green);font-weight:600}
+.nav-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0}
+.sidebar-footer{margin-top:auto;padding:14px 18px;border-top:1px solid var(--border)}
+.user-row{display:flex;align-items:center;gap:9px}
+.u-avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#16a34a,#22c55e);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.u-name{font-size:12px;font-weight:600;color:var(--text-primary)}
+.u-role{font-size:10px;color:var(--text-muted)}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:52px;background:var(--bg-surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:12px;flex-shrink:0}
+.topbar-title{font-size:15px;font-weight:700;color:var(--text-primary)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.notif{position:relative;width:32px;height:32px;border-radius:8px;background:var(--bg-elevated);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-muted)}
+.notif-dot{position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:var(--danger)}
+.page-content{flex:1;overflow-y:auto;padding:24px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.kpi-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+.kpi-label{font-size:11px;color:var(--text-muted);margin-bottom:5px;font-weight:500}
+.kpi-value{font-size:26px;font-weight:800;line-height:1}
+.kpi-sub{font-size:11px;color:var(--text-secondary);margin-top:4px}
+.crm-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px}
+.card-header{padding:14px 18px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:14px;font-weight:700;color:var(--text-primary)}
+.section-grid{display:grid;grid-template-columns:1fr 320px;gap:16px}
+.action-item{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:10px;cursor:pointer;transition:background .12s}
+.action-item:hover{background:var(--bg-elevated)}
+.action-item:last-child{border-bottom:none}
+.adot{width:8px;height:8px;border-radius:50%;margin-top:4px;flex-shrink:0}
+.adot.overdue{background:var(--danger);animation:pulse 2s infinite}
+.adot.today{background:var(--warning)}
+.adot.ok{background:var(--brand-green)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.a-lead{font-size:13px;font-weight:600;color:var(--text-primary)}
+.a-meta{font-size:11px;color:var(--text-muted);margin-top:2px}
+.feed-entry{font-size:12px;color:var(--text-secondary);padding:8px 12px;border-bottom:1px solid var(--border);animation:fadeIn .4s ease}
+.feed-entry:last-child{border-bottom:none}
+.feed-name{color:var(--text-primary);font-weight:600}
+@keyframes fadeIn{from{opacity:0;background:rgba(34,197,94,.08)}to{opacity:1}}
+.pipeline-board{display:flex;gap:12px;overflow-x:auto;padding-bottom:12px}
+.p-col{min-width:190px;flex-shrink:0}
+.p-col-head{padding:9px 12px;background:var(--bg-elevated);border-radius:8px 8px 0 0;border:1px solid var(--border);border-bottom:none;display:flex;justify-content:space-between;align-items:center}
+.p-col-title{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px}
+.p-col-cnt{font-size:11px;font-weight:700;background:var(--bg-card);padding:2px 7px;border-radius:10px;color:var(--text-secondary)}
+.p-col-body{border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;min-height:180px;padding:7px;background:var(--bg-base);display:flex;flex-direction:column;gap:6px}
+.lead-card{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;transition:all .15s}
+.lead-card:hover{border-color:rgba(34,197,94,.4);transform:translateY(-1px)}
+.lead-card.overdue{border-left:3px solid var(--danger)}
+.lc-name{font-size:12px;font-weight:600;color:var(--text-primary);margin-bottom:3px}
+.lc-meta{font-size:11px;color:var(--text-muted)}
+.lc-tag{display:inline-block;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;margin-top:4px}
+.tag-overdue{background:rgba(239,68,68,.15);color:var(--danger)}
+.tag-today{background:rgba(245,158,11,.15);color:var(--warning)}
+.tag-ok{background:rgba(34,197,94,.1);color:var(--brand-green)}
+.lead-panel{position:fixed;top:0;right:0;width:470px;height:100vh;background:var(--bg-surface);border-left:1px solid var(--border);transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);z-index:200;display:flex;flex-direction:column;overflow:hidden}
+.lead-panel.open{transform:translateX(0)}
+.ph{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:12px}
+.ph-close{margin-left:auto;width:28px;height:28px;border-radius:6px;background:var(--bg-elevated);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;color:var(--text-muted);flex-shrink:0}
+.pb{flex:1;overflow-y:auto;padding:18px 20px}
+.ph-company{font-size:16px;font-weight:800;color:var(--text-primary)}
+.ph-contact{font-size:12px;color:var(--text-muted);margin-top:2px}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.info-item{background:var(--bg-elevated);border-radius:8px;padding:9px 12px}
+.info-label{font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.info-val{font-size:13px;font-weight:600;color:var(--text-primary)}
+.fin-card{background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+.fin-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.fin-row:last-child{margin-bottom:0}
+.fin-label{font-size:12px;color:var(--text-muted)}
+.fin-val{font-size:13px;font-weight:700;color:var(--brand-green)}
+.log-form-card{background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+.type-btns{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px}
+.t-btn{padding:5px 10px;border-radius:6px;background:var(--bg-card);border:1px solid var(--border);color:var(--text-muted);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s}
+.t-btn.sel{background:var(--brand-green-dim);border-color:rgba(34,197,94,.4);color:var(--brand-green)}
+.log-note{width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text-primary);font-size:12px;font-family:inherit;resize:none;height:58px;margin-bottom:8px}
+.log-note:focus{outline:none;border-color:rgba(34,197,94,.4)}
+.btn-log{width:100%;padding:8px;background:var(--brand-green);border:none;border-radius:7px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.act-entry{display:flex;gap:9px;padding:9px 10px;background:var(--bg-elevated);border-radius:8px;animation:slideIn .3s ease}
+@keyframes slideIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.act-dot{width:7px;height:7px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.act-text{font-size:12px;color:var(--text-primary);font-weight:500}
+.act-meta{font-size:11px;color:var(--text-muted);margin-top:2px}
+.tour-intro{display:none;position:fixed;inset:0;z-index:1000;background:linear-gradient(135deg,#050508,#0d1a0d,#050508);align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:40px}
+.tour-intro.active{display:flex}
+.ti-brand{font-size:30px;font-weight:800;color:var(--brand-green);letter-spacing:-1px;margin-bottom:6px}
+.ti-role{display:inline-block;padding:3px 12px;background:var(--brand-green-dim);border:1px solid rgba(34,197,94,.3);color:var(--brand-green);border-radius:20px;font-size:12px;font-weight:700;margin-bottom:22px}
+.ti-headline{font-size:22px;font-weight:800;color:var(--text-primary);margin-bottom:10px;line-height:1.3}
+.ti-sub{font-size:14px;color:var(--text-muted);max-width:420px;margin:0 auto 28px}
+.ti-steps{display:flex;gap:14px;margin-bottom:28px;justify-content:center;flex-wrap:wrap}
+.ti-step{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:11px 16px;min-width:110px;text-align:left}
+.ti-step-num{font-size:10px;font-weight:700;color:var(--brand-green);margin-bottom:3px}
+.ti-step-label{font-size:12px;font-weight:600;color:var(--text-primary)}
+.ti-btn{padding:13px 40px;background:var(--brand-green);border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;animation:glow 2s ease-in-out infinite}
+@keyframes glow{0%,100%{box-shadow:0 0 20px rgba(34,197,94,.2)}50%{box-shadow:0 0 40px rgba(34,197,94,.5)}}
+.ti-skip{margin-top:12px;background:none;border:none;color:var(--text-muted);font-family:inherit;font-size:12px;cursor:pointer}
+.tour-overlay{display:none;position:fixed;inset:0;z-index:800;background:transparent;pointer-events:none}
+.tour-overlay.active{display:block}
+.tour-spotlight{position:fixed;border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.62),0 0 0 2px var(--brand-green),0 0 24px rgba(34,197,94,.4);transition:all .5s cubic-bezier(.4,0,.2,1);pointer-events:none;z-index:801}
+.tour-card{position:fixed;z-index:802;background:#14141f;border:1px solid rgba(34,197,94,.35);border-radius:14px;padding:20px 22px;max-width:350px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.6);transition:opacity .3s,transform .3s;opacity:0;transform:translateY(10px)}
+.tour-card.visible{opacity:1;transform:translateY(0)}
+.tc-badge{display:inline-block;padding:3px 9px;background:var(--brand-green-dim);border:1px solid rgba(34,197,94,.3);color:var(--brand-green);border-radius:20px;font-size:10px;font-weight:700;margin-bottom:9px}
+.tc-sim{display:inline-block;padding:3px 9px;background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.2);color:var(--brand-cyan);border-radius:6px;font-size:10px;font-weight:700;margin-bottom:9px;margin-left:6px}
+.tour-card h3{font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:7px}
+.tour-card p{font-size:13px;color:var(--text-secondary);line-height:1.7;margin-bottom:14px}
+.tour-card p strong{color:var(--brand-green)}
+.tc-nav{display:flex;justify-content:space-between;align-items:center}
+.tc-dots{display:flex;gap:5px}
+.tc-dot{width:6px;height:6px;border-radius:50%;background:var(--bg-elevated);transition:all .3s}
+.tc-dot.active{background:var(--brand-green);width:18px;border-radius:4px}
+.tc-dot.done{background:rgba(34,197,94,.35)}
+.tc-btns{display:flex;gap:7px}
+.tc-skip{padding:6px 14px;border-radius:6px;background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+.tc-next{padding:6px 16px;border-radius:6px;background:var(--brand-green);border:none;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+</style>
+</head>
+<body>
+<div class="tour-intro active" id="tourIntro">
+  <div class="ti-brand">\u0645\u0631\u0643\u0648\u0646 CRM</div>
+  <div class="ti-role">BD Acquisition Rep</div>
+  <div class="ti-headline">Your daily workflow,<br>in 8 steps</div>
+  <div class="ti-sub">Walk through how you\'ll actually use the CRM \u2014 from opening actions to logging a call that resets the SNA clock.</div>
+  <div class="ti-steps">
+    <div class="ti-step"><div class="ti-step-num">01</div><div class="ti-step-label">KPIs</div></div>
+    <div class="ti-step"><div class="ti-step-num">02</div><div class="ti-step-label">Today\'s Actions</div></div>
+    <div class="ti-step"><div class="ti-step-num">03</div><div class="ti-step-label">Pipeline Board</div></div>
+    <div class="ti-step"><div class="ti-step-num">04</div><div class="ti-step-label">Lead Profile</div></div>
+    <div class="ti-step"><div class="ti-step-num">05</div><div class="ti-step-label">Log Activity</div></div>
+  </div>
+  <button class="ti-btn" onclick="startTour()">Start Walkthrough</button>
+  <button class="ti-skip" onclick="skipTour()">Skip \u2014 go straight to demo</button>
+</div>
+<div class="tour-overlay" id="tourOverlay"></div>
+<div class="tour-spotlight" id="tourSpotlight" style="display:none"></div>
+<div class="tour-card" id="tourCard">
+  <div>
+    <span class="tc-badge" id="tcBadge">Step 1 of 8</span>
+    <span class="tc-sim" id="tcSim" style="display:none">Simulating live action</span>
+  </div>
+  <h3 id="tcTitle"></h3>
+  <p id="tcText"></p>
+  <div class="tc-nav">
+    <div class="tc-dots" id="tcDots"></div>
+    <div class="tc-btns">
+      <button class="tc-skip" onclick="skipTour()">Skip</button>
+      <button class="tc-next" id="tcNext" onclick="nextStep()">Next</button>
+    </div>
+  </div>
+</div>
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-text">\u0645\u0631\u0643\u0648\u0646</div>
+    <div class="logo-sub">Commercial CRM</div>
+    <div class="demo-badge">DEMO MODE</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">My Work</div>
+    <div class="nav-item active" id="nav-dashboard" onclick="showView(\'dashboard\')"><div class="nav-dot"></div>Dashboard</div>
+    <div class="nav-item" id="nav-pipeline" onclick="showView(\'pipeline\')"><div class="nav-dot"></div>Pipeline</div>
+    <div class="nav-item" onclick="showView(\'dashboard\')"><div class="nav-dot"></div>Leads</div>
+    <div class="nav-item" onclick="showView(\'dashboard\')"><div class="nav-dot"></div>Actions</div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Tools</div>
+    <div class="nav-item"><div class="nav-dot"></div>Calendar</div>
+    <div class="nav-item"><div class="nav-dot"></div>Ask AI</div>
+  </div>
+  <div class="sidebar-footer">
+    <div class="user-row">
+      <div class="u-avatar">Y</div>
+      <div><div class="u-name">Yassin</div><div class="u-role">BD Acquisition \u00b7 EG</div></div>
+    </div>
+  </div>
+</div>
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="topbarTitle">Dashboard</div>
+    <div class="topbar-right">
+      <div class="notif" id="notifBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><div class="notif-dot"></div></div>
+    </div>
+  </div>
+  <div class="page-content" id="view-dashboard">
+    <div class="kpi-row" id="kpiRow">
+      <div class="kpi-card" id="kpi-total"><div class="kpi-label">My Leads</div><div class="kpi-value" style="color:var(--text-primary)" id="kv-total">23</div><div class="kpi-sub">EG pipeline</div></div>
+      <div class="kpi-card" id="kpi-active"><div class="kpi-label">Active Pipeline</div><div class="kpi-value" style="color:var(--brand-cyan)" id="kv-active">8</div><div class="kpi-sub">Meeting to renewal</div></div>
+      <div class="kpi-card" id="kpi-actions"><div class="kpi-label">Actions Due</div><div class="kpi-value" style="color:var(--warning)" id="kv-actions">3</div><div class="kpi-sub">Today + overdue</div></div>
+      <div class="kpi-card" id="kpi-clients"><div class="kpi-label">My Clients</div><div class="kpi-value" style="color:#a78bfa" id="kv-clients">4</div><div class="kpi-sub">Active + renewal</div></div>
+    </div>
+    <div class="section-grid">
+      <div class="crm-card" id="actionsCard">
+        <div class="card-header"><div class="card-title">Today\'s Actions</div><span style="font-size:11px;color:var(--text-muted)">3 pending</span></div>
+        <div class="action-item" onclick="openPanel(\'karabo\')" id="action-karabo">
+          <div class="adot overdue"></div>
+          <div><div class="a-lead">Karabo Logistics</div><div class="a-meta">Follow-up call \u2014 2 days overdue</div></div>
+        </div>
+        <div class="action-item" onclick="openPanel(\'delta\')">
+          <div class="adot today"></div>
+          <div><div class="a-lead">Delta Trade Co.</div><div class="a-meta">Discovery call \u2014 today</div></div>
+        </div>
+        <div class="action-item" onclick="openPanel(\'nile\')">
+          <div class="adot ok"></div>
+          <div><div class="a-lead">Nile Casting Ltd.</div><div class="a-meta">Send proposal \u2014 tomorrow</div></div>
+        </div>
+        <div class="action-item" style="cursor:default">
+          <div style="font-size:12px;color:var(--text-muted);width:100%;text-align:center">View all leads in Pipeline board</div>
+        </div>
+      </div>
+      <div class="crm-card">
+        <div class="card-header"><div class="card-title">Live Activity</div><span style="width:7px;height:7px;border-radius:50%;background:var(--brand-green);animation:pulse 2s infinite;display:inline-block"></span></div>
+        <div id="liveFeed"></div>
+      </div>
+    </div>
+  </div>
+  <div class="page-content" id="view-pipeline" style="display:none">
+    <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:14px;font-weight:700">Pipeline Board</div>
+      <div style="font-size:12px;color:var(--text-muted)">Yassin \u00b7 23 leads</div>
+    </div>
+    <div class="pipeline-board" id="pipelineBoard"></div>
+  </div>
+</div>
+<div class="lead-panel" id="leadPanel">
+  <div class="ph">
+    <div>
+      <div class="ph-company" id="phCompany">Karabo Logistics</div>
+      <div class="ph-contact" id="phContact">Ahmed Karabo \u00b7 EG</div>
+    </div>
+    <div class="ph-close" onclick="closePanel()">x</div>
+  </div>
+  <div class="pb">
+    <div class="info-grid" id="infoGrid">
+      <div class="info-item"><div class="info-label">Stage</div><div class="info-val" style="color:var(--warning)">Negotiation</div></div>
+      <div class="info-item"><div class="info-label">Entity</div><div class="info-val">EG</div></div>
+      <div class="info-item"><div class="info-label">Source</div><div class="info-val">Cold Outreach</div></div>
+      <div class="info-item"><div class="info-label">SNA Status</div><div class="info-val" style="color:var(--danger)">Breached</div></div>
+    </div>
+    <div class="fin-card" id="finCard">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">Deal Financials</div>
+      <div class="fin-row"><span class="fin-label">Est. GMV / month</span><span class="fin-val">12,000 EGP</span></div>
+      <div class="fin-row"><span class="fin-label">Win probability</span><span class="fin-val">65%</span></div>
+      <div class="fin-row"><span class="fin-label">Weighted value</span><span class="fin-val">7,800 EGP</span></div>
+      <div class="fin-row"><span class="fin-label">Contract type</span><span class="fin-val" style="color:var(--brand-cyan)">Monthly</span></div>
+    </div>
+    <div class="log-form-card" id="logFormCard">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Log Activity</div>
+      <div class="type-btns" id="typeBtns">
+        <button class="t-btn" onclick="selType(this)">Call</button>
+        <button class="t-btn" onclick="selType(this)">Meeting</button>
+        <button class="t-btn" onclick="selType(this)">Email</button>
+        <button class="t-btn" onclick="selType(this)">WhatsApp</button>
+        <button class="t-btn" onclick="selType(this)">Note</button>
+      </div>
+      <textarea class="log-note" id="logNote" placeholder="What happened? What\'s next?"></textarea>
+      <button class="btn-log" onclick="doLog()">Log Activity</button>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:9px;text-transform:uppercase;letter-spacing:.5px">Activity Log</div>
+    <div style="display:flex;flex-direction:column;gap:7px" id="actLog">
+      <div class="act-entry"><div class="act-dot" style="background:#22d3ee"></div><div><div class="act-text">Call \u2014 Discussed pricing, interested in monthly plan</div><div class="act-meta">Yesterday \u00b7 Yassin</div></div></div>
+      <div class="act-entry"><div class="act-dot" style="background:#a78bfa"></div><div><div class="act-text">Meeting \u2014 Product walkthrough completed</div><div class="act-meta">4 days ago \u00b7 Yassin</div></div></div>
+      <div class="act-entry"><div class="act-dot" style="background:#22c55e"></div><div><div class="act-text">WhatsApp \u2014 Sent service overview PDF</div><div class="act-meta">1 week ago \u00b7 Yassin</div></div></div>
+    </div>
+  </div>
+</div>
+<script>
+const LEADS_DATA={karabo:{company:\'Karabo Logistics\',contact:\'Ahmed Karabo \u00b7 EG\',stage:\'Negotiation\',stageColor:\'var(--warning)\',sna:\'Breached\',snaColor:\'var(--danger)\'},delta:{company:\'Delta Trade Co.\',contact:\'Khalid Hassan \u00b7 EG\',stage:\'Meeting Done\',stageColor:\'var(--brand-cyan)\',sna:\'OK\',snaColor:\'var(--brand-green)\'},nile:{company:\'Nile Casting Ltd.\',contact:\'Samer Ali \u00b7 EG\',stage:\'Reaching Out\',stageColor:\'var(--text-secondary)\',sna:\'OK\',snaColor:\'var(--brand-green)\'},}
+const PIPELINE_DATA=[{id:\'reaching_out\',label:\'Reaching Out\',leads:[{n:\'Nile Casting Ltd.\',d:\'ok\'},{n:\'Al-Baraka Ind.\',d:\'today\'}]},{id:\'meeting_done\',label:\'Meeting Done\',leads:[{n:\'Delta Trade Co.\',d:\'ok\'},{n:\'Cairo Steel Co.\',d:\'today\'}]},{id:\'negotiation\',label:\'Negotiation\',leads:[{n:\'Karabo Logistics\',d:\'overdue\'},{n:\'Prime Scrap Co.\',d:\'ok\'}]},{id:\'prospect_active\',label:\'Prospect Active\',leads:[{n:\'Horizon Fab.\',d:\'ok\'},{n:\'Gulf Metals\',d:\'ok\'}]},{id:\'client_active\',label:\'Client Active\',leads:[{n:\'Al-Masry Group\',d:\'ok\'},{n:\'Apex Recycling\',d:\'ok\'}]},]
+const FEED_MSGS=[\'Stage updated: <span class="feed-name">Delta Trade</span> moved to Meeting Done\',\'Proposal sent to <span class="feed-name">Nile Casting</span>\',\'New lead assigned: <span class="feed-name">Apex Industrial</span>\',\'SNA reset for <span class="feed-name">Cairo Steel</span>\',\'Meeting booked: <span class="feed-name">Al-Baraka Ind.</span> \u2014 May 7\',\'Call logged: <span class="feed-name">Karabo Logistics</span> \u2014 follow-up confirmed\',]
+let feedIdx=0,selTypeVal=null
+function showView(v){[\'dashboard\',\'pipeline\'].forEach(id=>{document.getElementById(\'view-\'+id).style.display=id===v?\'\':\'none\'});document.getElementById(\'topbarTitle\').textContent=v===\'dashboard\'?\'Dashboard\':\'Pipeline\';document.querySelectorAll(\'.nav-item\').forEach(n=>n.classList.remove(\'active\'));const nd=document.getElementById(\'nav-\'+v);if(nd)nd.classList.add(\'active\')}
+function openPanel(id){const l=LEADS_DATA[id];if(!l)return;document.getElementById(\'phCompany\').textContent=l.company;document.getElementById(\'phContact\').textContent=l.contact;document.getElementById(\'infoGrid\').innerHTML=`<div class="info-item"><div class="info-label">Stage</div><div class="info-val" style="color:${l.stageColor}">${l.stage}</div></div><div class="info-item"><div class="info-label">Entity</div><div class="info-val">EG</div></div><div class="info-item"><div class="info-label">Source</div><div class="info-val">Cold Outreach</div></div><div class="info-item"><div class="info-label">SNA Status</div><div class="info-val" style="color:${l.snaColor}">${l.sna}</div></div>`;document.getElementById(\'leadPanel\').classList.add(\'open\');document.getElementById(\'logNote\').value=\'\';selTypeVal=null;document.querySelectorAll(\'.t-btn\').forEach(b=>b.classList.remove(\'sel\'))}
+function closePanel(){document.getElementById(\'leadPanel\').classList.remove(\'open\')}
+function selType(btn){document.querySelectorAll(\'.t-btn\').forEach(b=>b.classList.remove(\'sel\'));btn.classList.add(\'sel\');selTypeVal=btn.textContent}
+function doLog(){const note=document.getElementById(\'logNote\').value.trim();if(!note)return;const type=selTypeVal||\' Note\';const colors={Call:\'#22d3ee\',Meeting:\'#a78bfa\',Email:\'#f59e0b\',WhatsApp:\'#22c55e\',Note:\'#64748b\'};const el=document.createElement(\'div\');el.className=\'act-entry\';el.innerHTML=\'<div class="act-dot" style="background:\'+colors[type]+\'"></div><div><div class="act-text">\'+type+\" \u2014 \"+note+\'</div><div class="act-meta">Just now \u00b7 Yassin</div></div>\';const log=document.getElementById(\'actLog\');log.insertBefore(el,log.firstChild);document.getElementById(\'logNote\').value=\'\';selTypeVal=null;document.querySelectorAll(\'.t-btn\').forEach(b=>b.classList.remove(\'sel\'));const kv=document.getElementById(\'kv-actions\');kv.textContent=Math.max(0,parseInt(kv.textContent)-1)}
+function buildPipeline(){document.getElementById(\'pipelineBoard\').innerHTML=PIPELINE_DATA.map(s=>`<div class="p-col"><div class="p-col-head"><span class="p-col-title">${s.label}</span><span class="p-col-cnt">${s.leads.length}</span></div><div class="p-col-body">${s.leads.map(l=>`<div class="lead-card ${l.d===\'overdue\'?\'overdue\':\'\'}" onclick="openPanel(\'karabo\')"><div class="lc-name">${l.n}</div><div class="lc-meta">Yassin \u00b7 EG</div><span class="lc-tag ${l.d===\'overdue\'?\'tag-overdue\':\'tag-ok\'}">${l.d===\'overdue\'?\'Overdue\':\'OK\'}</span></div>`).join(\'\')}</div></div>`).join(\'\')}
+function addFeed(){const feed=document.getElementById(\'liveFeed\');const el=document.createElement(\'div\');el.className=\'feed-entry\';el.style.fontSize=\'12px\';el.style.color=\'var(--text-secondary)\';el.innerHTML=FEED_MSGS[feedIdx%FEED_MSGS.length];feedIdx++;feed.insertBefore(el,feed.firstChild);while(feed.children.length>6)feed.removeChild(feed.lastChild)}
+addFeed();setInterval(addFeed,8000)
+const STEPS=[{title:\'Your pipeline at a glance\',text:\"These 4 numbers update live. <strong>Actions Due</strong> is your daily priority \u2014 if it\'s not moving toward zero, your SNA clock is ticking.\",target:\'#kpiRow\',pos:\'bottom\',view:\'dashboard\'},{title:\"Start here every morning\",text:\"Today\'s Actions lists what needs attention right now. <strong>Red dot = overdue. Orange = today.</strong> Click any row to open the full lead profile.\",target:\'#actionsCard\',pos:\'right\',view:\'dashboard\'},{title:\'The Pipeline Board\',text:\'Every lead lives here, organized by stage. You can see your full funnel at a glance and work directly from any card.\',target:\'#pipelineBoard\',pos:\'bottom\',view:\'pipeline\'},{title:\'Lead profile opens on click\',text:\'Clicking a lead opens the full profile panel \u2014 stage, source, SNA status, deal financials, and the full activity history.\',target:\'#infoGrid\',pos:\'left\',view:\'pipeline\',action:\'openPanel\'},{title:\'Track deal financials\',text:\"Log estimated GMV, win probability, and contract type. The <strong>weighted value</strong> is calculated automatically \u2014 and it feeds into CCO forecasting.\",target:\'#finCard\',pos:\'left\',view:\'pipeline\',action:\'scroll\'},{title:\'Log every touch\',text:\"Select an activity type, write what happened and the next step. <strong>Every log resets the SNA clock.</strong> This is how you stay out of breach.\",target:\'#logFormCard\',pos:\'left\',view:\'pipeline\',action:\'scroll\'},{title:\'Watch it happen live\',text:\'The activity is typed and logged automatically. It appears at the top of the log instantly \u2014 the CCO sees this in real time.\',target:\'#actLog\',pos:\'left\',view:\'pipeline\',action:\'simulate\'},{title:\"You\'re ready\",text:\"That\'s the full daily workflow. Check actions, open leads, log every touch, keep the pipeline moving. The CRM handles reporting, SNA tracking, and forecasting.\",target:null,pos:\'center\',view:\'pipeline\'},]
+let step=-1
+const spotlight=document.getElementById(\'tourSpotlight\'),card=document.getElementById(\'tourCard\'),TOTAL=STEPS.length
+function startTour(){document.getElementById(\'tourIntro\').classList.remove(\'active\');document.getElementById(\'tourOverlay\').classList.add(\'active\');document.getElementById(\'tcDots\').innerHTML=STEPS.map((_,i)=>\'<div class="tc-dot" id="d\'+i+\'"></div>\').join(\'\');buildPipeline();step=-1;nextStep()}
+function skipTour(){document.getElementById(\'tourIntro\').classList.remove(\'active\');document.getElementById(\'tourOverlay\').classList.remove(\'active\');spotlight.style.display=\'none\';card.classList.remove(\'visible\');buildPipeline();showView(\'dashboard\');openPanel(\'karabo\')}
+function nextStep(){step++;if(step>=TOTAL){endTour();return}const s=STEPS[step];updateDots();document.getElementById(\'tcBadge\').textContent=\'Step \'+(step+1)+\' of \'+TOTAL;document.getElementById(\'tcTitle\').textContent=s.title;document.getElementById(\'tcText\').innerHTML=s.text;document.getElementById(\'tcNext\').textContent=step===TOTAL-1?\'Finish\':\'Next\';document.getElementById(\'tcSim\').style.display=s.action===\'simulate\'?\'inline-block\':\'none\';if(s.view)showView(s.view);if(s.action===\'openPanel\'||s.action===\'scroll\'||s.action===\'simulate\'){if(!document.getElementById(\'leadPanel\').classList.contains(\'open\'))openPanel(\'karabo\')}card.classList.remove(\'visible\');const delay=s.view&&s.view!==(step>0?STEPS[step-1].view:null)?400:100;setTimeout(()=>{if(s.action===\'simulate\')runSim();if(s.target){posSL(s.target,s.pos)}else{spotlight.style.display=\'none\';posCardCenter()}card.classList.add(\'visible\')},delay)}
+function runSim(){const btn=document.querySelector(\'.t-btn\');if(btn){btn.classList.add(\'sel\');selTypeVal=\'Call\'}const ta=document.getElementById(\'logNote\');const txt=\'Called Karabo \u2014 confirmed meeting next Tuesday, ready to sign\';let i=0;ta.value=\'\';const iv=setInterval(()=>{if(i<txt.length){ta.value+=txt[i++]}else{clearInterval(iv);setTimeout(()=>{doLog();const f=document.getElementById(\'actLog\').firstChild;if(f){f.style.background=\'rgba(34,197,94,.18)\';setTimeout(()=>{f.style.background=\'\'},1600)}},400)}},25)}
+function posSL(sel,pos){const el=document.querySelector(sel);if(!el){spotlight.style.display=\'none\';posCardCenter();return}el.scrollIntoView({behavior:\'smooth\',block:\'nearest\'});setTimeout(()=>{const r=el.getBoundingClientRect(),pad=10;spotlight.style.cssText=\'display:block;position:fixed;top:\'+( r.top-pad)+\'px;left:\'+( r.left-pad)+\'px;width:\'+( r.width+pad*2)+\'px;height:\'+( r.height+pad*2)+\'px\';posCard(r,pos)},320)}
+function posCard(r,pos){const cw=350,vw=window.innerWidth,vh=window.innerHeight;let t,l;if(pos===\'bottom\'){t=r.bottom+16;l=Math.max(10,Math.min(r.left,vw-cw-10))}else if(pos===\'right\'){t=Math.max(10,r.top);l=r.right+16}else if(pos===\'left\'){t=Math.max(10,r.top);l=r.left-cw-16}else{t=(vh-220)/2;l=(vw-cw)/2};if(t+220>vh-10)t=vh-230;if(l<10)l=10;if(l+cw>vw-10)l=vw-cw-10;card.style.top=t+\'px\';card.style.left=l+\'px\'}
+function posCardCenter(){card.style.top=((window.innerHeight-220)/2)+\'px\';card.style.left=((window.innerWidth-350)/2)+\'px\'}
+function updateDots(){STEPS.forEach((_,i)=>{const d=document.getElementById(\'d\'+i);if(!d)return;d.className=\'tc-dot\'+(i===step?\'active\':(i<step?\'done\':\'\')).replace(/^/,\' \').trim()})}
+function endTour(){document.getElementById(\'tourOverlay\').classList.remove(\'active\');spotlight.style.display=\'none\';card.classList.remove(\'visible\')}
+buildPipeline()
+<\/script>
+</body>
+</html>
