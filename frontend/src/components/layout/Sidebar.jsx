@@ -48,7 +48,7 @@ const NAV_AM = [
   { key: 'nav.settings',  icon: Settings,        href: '/settings' },
 ]
 
-const ENTITY_LABELS = { EG: '🇪🇬 Egypt', KSA: '🇸🇦 KSA', holding: '🌐 Holding' }
+const ENTITY_LABELS = { EG: 'EG', KSA: 'KSA', holding: 'All' }
 
 export default function Sidebar({ onShowTour }) {
   const {
@@ -121,7 +121,7 @@ export default function Sidebar({ onShowTour }) {
                   borderColor: entityView === e ? 'var(--brand-green)' : 'var(--border)',
                 }}
               >
-                {e === 'holding' ? '🌐' : e === 'EG' ? '🇪🇬' : '🇸🇦'} {e === 'holding' ? 'Hold' : e}
+                {e === 'holding' ? 'All' : e}
               </button>
             ))}
           </div>
@@ -157,7 +157,7 @@ export default function Sidebar({ onShowTour }) {
               key={item.key}
               to={item.href}
               end={item.href.endsWith('/dashboard/cco') || item.href.endsWith('/dashboard/bd') || item.href.endsWith('/dashboard/am') || item.href.endsWith('/dashboard/executive')}
-              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+              className={({ isActive }) => 'nav-item' + (isActive ? ' active' : '')}
             >
               <item.icon size={15} />
               <span>{t(item.key)}</span>
@@ -168,7 +168,7 @@ export default function Sidebar({ onShowTour }) {
         {isAdmin && (
           <NavLink
             to="/admin"
-            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            className={({ isActive }) => 'nav-item' + (isActive ? ' active' : '')}
           >
             <ShieldCheck size={15} />
             <span>Admin</span>
@@ -202,14 +202,14 @@ export default function Sidebar({ onShowTour }) {
           className="btn btn-ghost btn-xs flex-1"
           title="Toggle language"
         >
-          {lang === 'en' ? 'عربي' : 'EN'}
+          {lang === 'en' ? 'Arabic' : 'EN'}
         </button>
         <button
           onClick={() => setTheme(theme === 'dark' ? 'light' : theme === 'light' ? 'auto' : 'dark')}
           className="btn btn-ghost btn-xs"
-          title={`Theme: ${theme}`}
+          title={'Theme: ' + theme}
         >
-          {theme === 'dark' ? '🌙' : theme === 'light' ? '☀️' : '⚙️'}
+          {theme === 'dark' ? 'Dark' : theme === 'light' ? 'Light' : 'Auto'}
         </button>
         <button
           onClick={signOut}
