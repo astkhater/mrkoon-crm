@@ -1,11 +1,13 @@
 import { NavLink } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import {
   LayoutDashboard, Users, TrendingUp, Briefcase,
   Calendar, RefreshCw, Upload, Settings, Sparkles, LogOut,
-  ShieldCheck, HelpCircle, Briefcase as BriefcaseIcon
+  ShieldCheck, HelpCircle, Briefcase as BriefcaseIcon, X
 } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
-import { useApp }  from '@/contexts/AppContext'
+import { useAuth }   from '@/contexts/AuthContext'
+import { useApp }    from '@/contexts/AppContext'
+import { supabase }  from '@/lib/supabase'
 
 // Nav definitions per role group
 const NAV_EXEC = [
@@ -48,20 +50,31 @@ const NAV_AM = [
   { key: 'nav.settings',  icon: Settings,        href: '/settings' },
 ]
 
-const ENTITY_LABELS = { EG: 'EG', KSA: 'KSA', holding: 'All' }
-
 export default function Sidebar({ onShowTour }) {
   const {
     role, isAdmin, isExecutive, isCCO, isCEO, isCOO, isTL, isBDRep, isAM,
     canImport, isBDMode, viewMode, entityView, setViewMode, setEntityView,
     signOut, profile,
   } = useAuth()
-  const { t, lang, setLang, theme, setTheme } = useApp()
+  const { t, lang, setLang, theme, setTheme, repFilter, repFilterName, setRepFilter } = useApp()
+
+  // Reps list for the rep selector (managers + executives only)
+  const isManager = isCCO || isTL || isCEO || isCOO
+  const [repsList, setRepsList] = useState([])
+  useEffect(() => {
+    if (!isManager && !isExecutive) return
+    supabase
+      .from('profiles')
+      .select('id, full_name')
+      .in('role', ['bd_rep', 'bd_tl', 'am'])
+      .order('full_name')
+      .then(({ data }) => setRepsList(data ?? []))
+  }, [isManager, isExecutive])
 
   // Pick nav list
   let navItems
   if (isBDMode) {
-    navItems = NAV_BD  // executive acting as BD
+    navItems = NAV_BD
   } else if (isCEO || isCOO) {
     navItems = NAV_EXEC
   } else if (isCCO || isTL) {
@@ -75,6 +88,8 @@ export default function Sidebar({ onShowTour }) {
   const roleLabel = isBDMode
     ? 'BD MODE'
     : (role?.toUpperCase().replace(/_/g, ' ') ?? '')
+
+  const showRepSelector = (isManager || isExecutive) && !isBDMode
 
   return (
     <aside className="sidebar">
@@ -148,6 +163,49 @@ export default function Sidebar({ onShowTour }) {
         </div>
       )}
 
+      {/* Rep filter selector */}
+      {showRepSelector && repsList.length > 0 && (
+        <div className="px-3 py-2 border-b b1">
+          <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+            Rep View
+          </div>
+          {repFilter ? (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '4px',
+              padding: '4px 8px', borderRadius: '6px',
+              background: 'rgba(34,211,238,0.1)',
+              border: '1px solid rgba(34,211,238,0.25)',
+            }}>
+              <span style={{ flex: 1, fontSize: '11px', fontWeight: 600, color: 'var(--brand-cyan)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {repFilterName}
+              </span>
+              <button
+                onClick={() => setRepFilter('', '')}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0', display: 'flex', color: 'var(--text-muted)' }}
+                title="Clear rep filter"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          ) : (
+            <select
+              className="crm-input"
+              style={{ width: '100%', fontSize: '11px', padding: '4px 8px' }}
+              value=""
+              onChange={e => {
+                const rep = repsList.find(r => r.id === e.target.value)
+                if (rep) setRepFilter(rep.id, rep.full_name)
+              }}
+            >
+              <option value="">All reps</option>
+              {repsList.map(r => (
+                <option key={r.id} value={r.id}>{r.full_name}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
+
       {/* Nav items */}
       <nav className="flex-1 py-2">
         {navItems
@@ -202,7 +260,7 @@ export default function Sidebar({ onShowTour }) {
           className="btn btn-ghost btn-xs flex-1"
           title="Toggle language"
         >
-          {lang === 'en' ? 'Arabic' : 'EN'}
+          {lang === 'en' ? 'عربي' : 'EN'}
         </button>
         <button
           onClick={() => setTheme(theme === 'dark' ? 'light' : theme === 'light' ? 'auto' : 'dark')}
