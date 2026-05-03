@@ -3,15 +3,30 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, TrendingUp, Users, DollarSign, ArrowRight, Calendar, Inbox } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import TopBar    from '@/components/layout/TopBar'
+import LeadPanel from '@/components/pipeline/LeadPanel'
 import { useApp }  from '@/contexts/AppContext'
 import { supabase } from '@/lib/supabase'
 import { formatEGP, formatDate } from '@/lib/i18n'
 
 // -- Data fetching
-function useCCOStats() {
+function useCCOStats(repFilter) {
   return useQuery({
-    queryKey: ['cco-stats'],
+    queryKey: ['cco-stats', repFilter],
     queryFn: async () => {
+      let leadsQ      = supabase.from('leads').select('id', { count: 'exact', head: true })
+      let upcomingQ   = supabase.from('leads')
+        .select('id, company_name, stage, contact_name, next_action, next_action_date, profiles:assigned_to(full_name)')
+        .not('stage', 'in', '(client_active,client_inactive,client_renewal,lost,unqualified)')
+        .lte('next_action_date', (() => { const d = new Date(); d.setDate(d.getDate() + 7); return d.toISOString().slice(0, 10) })())
+        .not('next_action_date', 'is', null)
+        .order('next_action_date')
+        .limit(40)
+
+      if (repFilter) {
+        leadsQ    = leadsQ.eq('assigned_to', repFilter)
+        upcomingQ = upcomingQ.eq('assigned_to', repFilter)
+      }
+
       const [
         { count: totalLeads },
         { data: pipelineSummary },
@@ -22,17 +37,11 @@ function useCCOStats() {
         { data: poolLeads },
         { data: repsData },
       ] = await Promise.all([
-        supabase.from('leads').select('id', { count: 'exact', head: true }),
+        leadsQ,
         supabase.from('v_pipeline_summary_by_rep').select('*'),
         supabase.from('leads').select('id', { count: 'exact', head: true }).eq('is_sna', true),
         supabase.from('handoffs').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('leads')
-          .select('id, company_name, stage, contact_name, next_action, next_action_date, profiles:assigned_to(full_name)')
-          .not('stage', 'in', '(client_active,client_inactive,client_renewal,lost,unqualified)')
-          .lte('next_action_date', (() => { const d = new Date(); d.setDate(d.getDate() + 7); return d.toISOString().slice(0, 10) })())
-          .not('next_action_date', 'is', null)
-          .order('next_action_date')
-          .limit(40),
+        upcomingQ,
         supabase.from('leads').select('id', { count: 'exact', head: true }).is('assigned_to', null),
         supabase.from('leads')
           .select('id, company_name, stage, contact_name, phone, lead_source, area_city, created_at')
@@ -41,13 +50,18 @@ function useCCOStats() {
           .limit(50),
         supabase.from('profiles')
           .select('id, full_name, role')
-          .in('role', ['bd_rep', 'bd_tl', 'bd_am'])
+          .in('role', ['bd_rep', 'bd_tl', 'am'])
           .order('full_name'),
       ])
 
-      const totalWeightedGMV   = pipelineSummary?.reduce((s, r) => s + (r.total_weighted_gmv_month   ?? 0), 0) ?? 0
-      const totalContractedGMV = pipelineSummary?.reduce((s, r) => s + (r.total_contracted_gmv_month ?? 0), 0) ?? 0
-      const totalRealizedGMV   = pipelineSummary?.reduce((s, r) => s + (r.total_realized_gmv         ?? 0), 0) ?? 0
+      // Filter rep grid if a specific rep is selected
+      const repsFiltered = repFilter
+        ? (pipelineSummary ?? []).filter(r => r.rep_id === repFilter)
+        : (pipelineSummary ?? [])
+
+      const totalWeightedGMV   = repsFiltered.reduce((s, r) => s + (r.total_weighted_gmv_month   ?? 0), 0)
+      const totalContractedGMV = repsFiltered.reduce((s, r) => s + (r.total_contracted_gmv_month ?? 0), 0)
+      const totalRealizedGMV   = repsFiltered.reduce((s, r) => s + (r.total_realized_gmv         ?? 0), 0)
 
       return {
         totalLeads:        totalLeads   ?? 0,
@@ -56,7 +70,7 @@ function useCCOStats() {
         totalWeightedGMV,
         totalContractedGMV,
         totalRealizedGMV,
-        reps:              pipelineSummary ?? [],
+        reps:              repFilter ? repsFiltered : (pipelineSummary ?? []),
         upcomingActions:   upcomingActions ?? [],
         poolCount:         poolCount ?? 0,
         poolLeads:         poolLeads ?? [],
@@ -94,18 +108,28 @@ function KpiCard({ label, value, sub, accent, icon: Icon, alert }) {
   )
 }
 
-// -- Rep row
-function RepRow({ rep }) {
+// -- Rep row (clickable → sets global rep filter)
+function RepRow({ rep, onSelect, isSelected }) {
   return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: '140px 60px 60px 90px 90px 90px',
-      gap: '8px', alignItems: 'center',
-      padding: '10px 14px',
-      borderBottom: '1px solid var(--border-default)',
-      fontSize: '12px',
-    }}>
-      <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '13px' }}>{rep.rep_name}</div>
+    <div
+      onClick={() => onSelect(rep)}
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '140px 60px 60px 90px 90px 90px',
+        gap: '8px', alignItems: 'center',
+        padding: '10px 14px',
+        borderBottom: '1px solid var(--border-default)',
+        fontSize: '12px',
+        cursor: 'pointer',
+        background: isSelected ? 'rgba(34,211,238,0.06)' : 'transparent',
+        transition: 'background 0.15s',
+      }}
+      onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'var(--bg-hover)' }}
+      onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent' }}
+    >
+      <div style={{ fontWeight: 600, color: isSelected ? 'var(--brand-cyan)' : 'var(--text-primary)', fontSize: '13px' }}>
+        {rep.rep_name}
+      </div>
       <div style={{ color: 'var(--text-secondary)' }}>{rep.count_client_active}</div>
       <div style={{ color: rep.count_sna_breached > 0 ? '#ef4444' : 'var(--text-secondary)' }}>
         {rep.count_sna_breached > 0 ? '! ' : ''}{rep.count_sna_breached}
@@ -147,8 +171,8 @@ function ActionRow({ lead, lang }) {
   )
 }
 
-// -- Pool lead row with assign dropdown
-function PoolRow({ lead, reps, onAssign }) {
+// -- Pool lead row with assign dropdown + clickable name
+function PoolRow({ lead, reps, onAssign, onOpenLead }) {
   const [assigning, setAssigning] = useState(false)
 
   const handleAssign = async (repId) => {
@@ -170,8 +194,16 @@ function PoolRow({ lead, reps, onAssign }) {
       padding: '10px 14px', borderBottom: '1px solid var(--border-default)',
       fontSize: '12px',
     }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <div
+        style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}
+        onClick={() => onOpenLead(lead.id)}
+      >
+        <div style={{
+          fontWeight: 600, color: 'var(--text-primary)',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          textDecoration: 'underline', textUnderlineOffset: '2px',
+          textDecorationColor: 'rgba(255,255,255,0.2)',
+        }}>
           {lead.company_name}
         </div>
         <div style={{ display: 'flex', gap: '8px', marginTop: '3px', alignItems: 'center' }}>
@@ -208,10 +240,11 @@ function PoolRow({ lead, reps, onAssign }) {
 
 // -- Main CCO dashboard
 export default function CCODashboard() {
-  const { t, lang, toast } = useApp()
+  const { t, lang, toast, repFilter, repFilterName, setRepFilter } = useApp()
   const navigate            = useNavigate()
   const queryClient         = useQueryClient()
-  const { data, isLoading, error } = useCCOStats()
+  const { data, isLoading, error } = useCCOStats(repFilter)
+  const [selectedLeadId, setSelectedLeadId] = useState(null)
 
   const handleAssign = async (leadId, repId) => {
     const { error: updateErr } = await supabase
@@ -222,6 +255,14 @@ export default function CCODashboard() {
       toast({ type: 'error', message: 'Failed to assign lead' })
     } else {
       queryClient.invalidateQueries({ queryKey: ['cco-stats'] })
+    }
+  }
+
+  const handleRepSelect = (rep) => {
+    if (repFilter === rep.rep_id) {
+      setRepFilter('', '')
+    } else {
+      setRepFilter(rep.rep_id, rep.rep_name)
     }
   }
 
@@ -243,11 +284,31 @@ export default function CCODashboard() {
     </>
   )
 
+  const dashTitle = repFilter ? `${t('cco.title')} — ${repFilterName}` : t('cco.title')
+
   return (
     <>
-      <TopBar title={t('cco.title')} />
+      <TopBar title={dashTitle} />
 
       <div className="page-content">
+
+        {repFilter && (
+          <div style={{
+            padding: '8px 14px', borderRadius: '8px', marginBottom: '16px',
+            background: 'rgba(34,211,238,0.07)', border: '1px solid rgba(34,211,238,0.2)',
+            display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px',
+          }}>
+            <span style={{ color: 'var(--brand-cyan)', fontWeight: 600 }}>Viewing: {repFilterName}</span>
+            <span style={{ color: 'var(--text-muted)' }}>— all data filtered to this rep</span>
+            <button
+              className="btn btn-ghost btn-xs"
+              style={{ marginInlineStart: 'auto' }}
+              onClick=() => setRepFilter('', '')}
+            >
+              Clear filter
+            </button>
+          </div>
+        )}
 
         {data.snaBreached > 0 && (
           <div style={{
@@ -305,6 +366,11 @@ export default function CCODashboard() {
               <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
                 {t('cco.rep_grid')}
               </span>
+              {!repFilter && (
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '8px' }}>
+                  Click a rep to filter
+                </span>
+              )}
             </div>
             <div style={{
               display: 'grid',
@@ -323,7 +389,14 @@ export default function CCODashboard() {
                 {t('misc.empty')}
               </div>
             ) : (
-              data.reps.map((rep, i) => <RepRow key={i} rep={rep} />)
+              data.reps.map((rep, i) => (
+                <RepRow
+                  key={i}
+                  rep={rep}
+                  onSelect={handleRepSelect}
+                  isSelected={repFilter === rep.rep_id}
+                />
+              ))
             )}
           </div>
 
@@ -364,7 +437,7 @@ export default function CCODashboard() {
               </span>
             </div>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-              Select a rep from the dropdown to assign
+              Click name to view · dropdown to assign
             </div>
           </div>
 
@@ -380,11 +453,12 @@ export default function CCODashboard() {
                   lead={lead}
                   reps={data.repsList}
                   onAssign={handleAssign}
+                  onOpenLead={setSelectedLeadId}
                 />
               ))}
               {data.poolCount > 50 && (
                 <div style={{ padding: '10px 16px', fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', borderTop: '1px solid var(--border-default)' }}>
-                  {'Showing 50 of ' + data.poolCount + ' pool leads'}
+                  Showing 50 of {data.poolCount} pool leads
                 </div>
               )}
             </>
@@ -392,6 +466,10 @@ export default function CCODashboard() {
         </div>
 
       </div>
+
+      {selectedLeadId && (
+        <LeadPanel leadId={selectedLeadId} onClose={() => setSelectedLeadId(null)} />
+      )}
     </>
   )
 }
