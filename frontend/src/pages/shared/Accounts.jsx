@@ -8,8 +8,8 @@ import { formatEGP, formatDate } from '@/lib/i18n'
 import TopBar            from '@/components/layout/TopBar'
 import LeadPanel         from '@/components/pipeline/LeadPanel'
 
-const CLIENT_STAGES  = ['client_active', 'client_inactive', 'client_renewal']
-const STAGE_COLORS   = { client_active: '#22c55e', client_inactive: '#ef4444', client_renewal: '#f59e0b' }
+const CLIENT_STAGES = ['client_active', 'client_inactive', 'client_renewal']
+const STAGE_COLORS  = { client_active: '#22c55e', client_inactive: '#ef4444', client_renewal: '#f59e0b' }
 const CONTRACT_TYPES = ['yearly','quarterly','monthly','yearly_on_demand','per_item']
 
 async function fetchAccounts(userId, isManager) {
@@ -42,23 +42,22 @@ async function fetchReps() {
 }
 
 export default function Accounts() {
-  const { userId, isManager } = useAuth()
-  const { t, lang }           = useApp()
+  const { userId, isManager }               = useAuth()
+  const { t, lang, repFilter, setRepFilter } = useApp()
   const [search,         setSearch]         = useState('')
   const [stageFilter,    setStageFilter]    = useState('')
   const [contractFilter, setContractFilter] = useState('')
-  const [repFilter,      setRepFilter]      = useState('')
   const [entityFilter,   setEntityFilter]   = useState('')
   const [selectedLead,   setSelectedLead]   = useState(null)
 
   const { data: accounts = [], isLoading } = useQuery({
     queryKey: ['accounts', userId, isManager],
     queryFn:  () => fetchAccounts(userId, isManager),
-    staleTime: 30000,
+    staleTime: 30_000,
   })
   const { data: reps = [] } = useQuery({
     queryKey: ['pipeline-reps'], queryFn: fetchReps,
-    enabled: isManager, staleTime: 120000,
+    enabled: isManager, staleTime: 120_000,
   })
 
   const kpis = useMemo(() => {
@@ -84,8 +83,7 @@ export default function Accounts() {
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
       <div style={{ position: 'relative' }}>
         <Search size={13} style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-        <input className="crm-input" style={{ paddingLeft: '28px', width: '200px', fontSize: '12px' }}
-          placeholder="Search accounts..." value={search} onChange={e => setSearch(e.target.value)} />
+        <input className="crm-input" style={{ paddingLeft: '28px', width: '200px', fontSize: '12px' }} placeholder="Search accounts..." value={search} onChange={e => setSearch(e.target.value)} />
       </div>
       <select className="crm-input" style={{ fontSize: '12px', width: '130px' }} value={stageFilter} onChange={e => setStageFilter(e.target.value)}>
         <option value="">All statuses</option>
@@ -99,7 +97,11 @@ export default function Accounts() {
         <option value="">All</option><option value="EG">Egypt</option><option value="KSA">KSA</option>
       </select>
       {isManager && (
-        <select className="crm-input" style={{ fontSize: '12px', width: '140px' }} value={repFilter} onChange={e => setRepFilter(e.target.value)}>
+        <select className="crm-input" style={{ fontSize: '12px', width: '140px' }} value={repFilter}
+          onChange={e => {
+            const rep = reps.find(r => r.id === e.target.value)
+            setRepFilter(e.target.value, rep?.full_name || '')
+          }}>
           <option value="">All reps</option>
           {reps.map(r => <option key={r.id} value={r.id}>{r.full_name}</option>)}
         </select>
