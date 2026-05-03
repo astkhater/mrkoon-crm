@@ -1,5 +1,5 @@
 /**
- * Pipeline — kanban board
+ * Pipeline â kanban board
  * 8 active columns + collapsible graveyard (lost, unqualified)
  * CCO/TL: see all reps + filter dropdown
  * BD Rep: own leads only
@@ -16,7 +16,7 @@ import LeadCard         from '@/components/pipeline/LeadCard'
 import LeadPanel        from '@/components/pipeline/LeadPanel'
 import AddLeadModal     from '@/components/pipeline/AddLeadModal'
 
-// ── Stage config ──────────────────────────────────────────────
+// ââ Stage config ââââââââââââââââââââââââââââââââââââââââââââââ
 const ACTIVE_STAGES = [
   { key: 'new_lead',        color: '#64748b' },
   { key: 'reaching_out',    color: '#3b82f6' },
@@ -33,7 +33,7 @@ const GRAVEYARD_STAGES = [
   { key: 'unqualified', color: '#475569' },
 ]
 
-// ── Data fetching ─────────────────────────────────────────────
+// ââ Data fetching âââââââââââââââââââââââââââââââââââââââââââââ
 async function fetchPipelineLeads(userId, isManager, repFilter) {
   let q = supabase
     .from('leads')
@@ -63,13 +63,13 @@ async function fetchReps() {
   const { data, error } = await supabase
     .from('profiles')
     .select('id, full_name')
-    .in('role', ['bd_rep', 'am', 'tl'])
+    .in('role', ['bd_rep', 'am', 'bd_tl'])
     .order('full_name')
   if (error) throw error
   return data ?? []
 }
 
-// ── Component ───────────────────────────────────────────────────────────
+// ââ Component âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 export default function Pipeline() {
   const { userId, isManager } = useAuth()
   const { t, repFilter, setRepFilter }    = useApp()
@@ -147,7 +147,7 @@ export default function Pipeline() {
       ) : (
         <div style={{ flex: 1, overflowX: 'auto', overflowY: 'hidden', padding: '0 16px 16px' }}>
 
-          {/* ── Active columns ── */}
+          {/* ââ Active columns ââ */}
           <div style={{
             display: 'flex', gap: '10px',
             minWidth: `${ACTIVE_STAGES.length * 220}px`,
@@ -166,7 +166,7 @@ export default function Pipeline() {
             ))}
           </div>
 
-          {/* ── Graveyard ── */}
+          {/* ââ Graveyard ââ */}
           <div style={{ marginTop: '14px' }}>
             <button
               className="btn btn-ghost btn-sm"
@@ -225,7 +225,7 @@ export default function Pipeline() {
   )
 }
 
-// ── Kanban column ─────────────────────────────────────────────
+// ââ Kanban column âââââââââââââââââââââââââââââââââââââââââââââ
 function KanbanColumn({ stageKey, color, leads, label, onCardClick }) {
   const totalGMV = leads.reduce((sum, l) => sum + (l.estimated_gmv_month ?? 0), 0)
 
@@ -283,7 +283,7 @@ function KanbanColumn({ stageKey, color, leads, label, onCardClick }) {
             textAlign: 'center', padding: '20px 0',
             fontSize: '11px', color: 'var(--text-muted)',
           }}>
-            —
+            â
           </div>
         ) : (
           leads.map(lead => (
