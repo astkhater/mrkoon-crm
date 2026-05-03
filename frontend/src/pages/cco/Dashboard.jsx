@@ -108,7 +108,7 @@ function KpiCard({ label, value, sub, accent, icon: Icon, alert }) {
   )
 }
 
-// -- Rep row (clickable → sets global rep filter)
+// -- Rep row (clickable â sets global rep filter)
 function RepRow({ rep, onSelect, isSelected }) {
   return (
     <div
@@ -284,7 +284,7 @@ export default function CCODashboard() {
     </>
   )
 
-  const dashTitle = repFilter ? `${t('cco.title')} — ${repFilterName}` : t('cco.title')
+  const dashTitle = repFilter ? `${t('cco.title')} â ${repFilterName}` : t('cco.title')
 
   return (
     <>
@@ -299,11 +299,11 @@ export default function CCODashboard() {
             display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px',
           }}>
             <span style={{ color: 'var(--brand-cyan)', fontWeight: 600 }}>Viewing: {repFilterName}</span>
-            <span style={{ color: 'var(--text-muted)' }}>— all data filtered to this rep</span>
+            <span style={{ color: 'var(--text-muted)' }}>â all data filtered to this rep</span>
             <button
               className="btn btn-ghost btn-xs"
               style={{ marginInlineStart: 'auto' }}
-              onClick=() => setRepFilter('', '')}
+              onClick={() => setRepFilter('', '')}
             >
               Clear filter
             </button>
@@ -437,7 +437,7 @@ export default function CCODashboard() {
               </span>
             </div>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-              Click name to view · dropdown to assign
+              Click name to view Â· dropdown to assign
             </div>
           </div>
 
