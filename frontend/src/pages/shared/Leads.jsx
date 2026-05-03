@@ -1,6 +1,12 @@
+/**
+ * Leads — searchable, filterable table of all pipeline leads
+ * CCO/TL: see all reps + rep filter
+ * BD Rep: own leads only
+ * Row click opens LeadPanel slide-in
+ */
 import { useState, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Search, AlertTriangle, Calendar, ChevronUp, ChevronDown, CheckSquare, Square, X } from 'lucide-react'
+import { Search, AlertTriangle, Calendar, ChevronUp, ChevronDown, CheckSquare, Square, Tag, X } from 'lucide-react'
 import { supabase }     from '@/lib/supabase'
 import { useAuth }      from '@/contexts/AuthContext'
 import { useApp }       from '@/contexts/AppContext'
@@ -8,6 +14,7 @@ import { formatDate, formatEGP } from '@/lib/i18n'
 import TopBar           from '@/components/layout/TopBar'
 import LeadPanel        from '@/components/pipeline/LeadPanel'
 
+// ── Constants ─────────────────────────────────────────────────
 const ALL_STAGES = [
   'new_lead', 'reaching_out', 'no_response', 'meeting_done',
   'negotiation', 'prospect_active', 'prospect_cold', 'reconnect',
@@ -29,6 +36,7 @@ const STAGE_COLORS = {
   lost: '#ef4444', unqualified: '#475569',
 }
 
+// ── Data fetching ─────────────────────────────────────────────
 async function fetchLeads(userId, isManager) {
   let q = supabase
     .from('leads')
@@ -59,6 +67,7 @@ async function fetchReps() {
   return data ?? []
 }
 
+// ── Sort helper ─────────────────────────────────────────────────────────────────────
 function sortLeads(leads, key, dir) {
   if (!key) return leads
   return [...leads].sort((a, b) => {
@@ -71,15 +80,15 @@ function sortLeads(leads, key, dir) {
   })
 }
 
+// ── Component ─────────────────────────────────────────────────
 export default function Leads() {
-  const { userId, isManager } = useAuth()
-  const { t, lang }           = useApp()
-  const queryClient           = useQueryClient()
+  const { userId, isManager }               = useAuth()
+  const { t, lang, repFilter, setRepFilter } = useApp()
+  const queryClient                         = useQueryClient()
 
   const [search,        setSearch]        = useState('')
   const [stageFilter,   setStageFilter]   = useState('')
   const [sourceFilter,  setSourceFilter]  = useState('')
-  const [repFilter,     setRepFilter]     = useState('')
   const [entityFilter,  setEntityFilter]  = useState('')
   const [selectedLead,  setSelectedLead]  = useState(null)
   const [sortKey,       setSortKey]       = useState('date_added')
@@ -101,6 +110,7 @@ export default function Leads() {
     staleTime: 120_000,
   })
 
+  // Filter + sort
   const filtered = useMemo(() => {
     let rows = leads
     if (search) {
@@ -152,10 +162,15 @@ export default function Leads() {
     return sortDir === 'asc' ? <ChevronUp size={11} /> : <ChevronDown size={11} />
   }
 
+  // TopBar actions
   const actions = (
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+      {/* Search */}
       <div style={{ position: 'relative' }}>
-        <Search size={13} style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+        <Search size={13} style={{
+          position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)',
+          color: 'var(--text-muted)', pointerEvents: 'none',
+        }} />
         <input
           className="crm-input"
           style={{ paddingLeft: '28px', width: '200px', fontSize: '12px' }}
@@ -164,21 +179,36 @@ export default function Leads() {
           onChange={e => setSearch(e.target.value)}
         />
       </div>
-      <select className="crm-input" style={{ fontSize: '12px', width: '140px' }} value={stageFilter} onChange={e => setStageFilter(e.target.value)}>
+
+      {/* Stage filter */}
+      <select className="crm-input" style={{ fontSize: '12px', width: '140px' }}
+        value={stageFilter} onChange={e => setStageFilter(e.target.value)}>
         <option value="">All stages</option>
-        {ALL_STAGES.map(s => <option key={s} value={s}>{t('stage.' + s)}</option>)}
+        {ALL_STAGES.map(s => <option key={s} value={s}>{t(`stage.${s}`)}</option>)}
       </select>
-      <select className="crm-input" style={{ fontSize: '12px', width: '130px' }} value={sourceFilter} onChange={e => setSourceFilter(e.target.value)}>
+
+      {/* Source filter */}
+      <select className="crm-input" style={{ fontSize: '12px', width: '130px' }}
+        value={sourceFilter} onChange={e => setSourceFilter(e.target.value)}>
         <option value="">All sources</option>
-        {SOURCES.map(s => <option key={s} value={s}>{t('source.' + s)}</option>)}
+        {SOURCES.map(s => <option key={s} value={s}>{t(`source.${s}`)}</option>)}
       </select>
-      <select className="crm-input" style={{ fontSize: '12px', width: '90px' }} value={entityFilter} onChange={e => setEntityFilter(e.target.value)}>
+
+      {/* Entity filter */}
+      <select className="crm-input" style={{ fontSize: '12px', width: '90px' }}
+        value={entityFilter} onChange={e => setEntityFilter(e.target.value)}>
         <option value="">All</option>
         <option value="EG">Egypt</option>
         <option value="KSA">KSA</option>
       </select>
+
+      {/* Rep filter — managers only */}
       {isManager && (
-        <select className="crm-input" style={{ fontSize: '12px', width: '140px' }} value={repFilter} onChange={e => setRepFilter(e.target.value)}>
+        <select className="crm-input" style={{ fontSize: '12px', width: '140px' }}
+          value={repFilter} onChange={e => {
+            const rep = reps.find(r => r.id === e.target.value)
+            setRepFilter(e.target.value, rep?.full_name || '')
+          }}>
           <option value="">All reps</option>
           {reps.map(r => <option key={r.id} value={r.id}>{r.full_name}</option>)}
         </select>
@@ -190,7 +220,14 @@ export default function Leads() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <TopBar title={t('nav.leads')} actions={actions} />
 
-      <div style={{ padding: '6px 18px', fontSize: '12px', color: 'var(--text-muted)', borderBottom: '1px solid var(--border-default)', background: 'var(--bg-surface)', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+      {/* Count + bulk action bar */}
+      <div style={{
+        padding: '6px 18px', fontSize: '12px', color: 'var(--text-muted)',
+        borderBottom: '1px solid var(--border-default)',
+        background: 'var(--bg-surface)',
+        flexShrink: 0,
+        display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap',
+      }}>
         {isLoading ? t('misc.loading') : (
           <span>
             {filtered.length} lead{filtered.length !== 1 ? 's' : ''}
@@ -204,11 +241,20 @@ export default function Leads() {
         {selected.size > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
             <span style={{ color: 'var(--brand-cyan)', fontWeight: 600 }}>{selected.size} selected</span>
-            <select value={bulkStage} onChange={e => setBulkStage(e.target.value)} className="crm-input" style={{ fontSize: '11px', padding: '3px 7px', height: '26px' }}>
+            <select
+              value={bulkStage}
+              onChange={e => setBulkStage(e.target.value)}
+              className="crm-input"
+              style={{ fontSize: '11px', padding: '3px 7px', height: '26px' }}
+            >
               <option value="">Move to stage…</option>
               {ALL_STAGES.map(s => <option key={s} value={s}>{s.replace(/_/g,' ')}</option>)}
             </select>
-            <button onClick={applyBulkStage} disabled={!bulkStage || bulkSaving} className="btn btn-primary btn-xs">
+            <button
+              onClick={applyBulkStage}
+              disabled={!bulkStage || bulkSaving}
+              className="btn btn-primary btn-xs"
+            >
               {bulkSaving ? 'Saving…' : 'Apply'}
             </button>
             <button onClick={() => setSelected(new Set())} className="btn btn-ghost btn-xs">
@@ -218,11 +264,16 @@ export default function Leads() {
         )}
       </div>
 
+      {/* Table */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {isLoading ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>{t('misc.loading')}</div>
+          <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+            {t('misc.loading')}
+          </div>
         ) : filtered.length === 0 ? (
-          <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>{t('misc.empty')}</div>
+          <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+            {t('misc.empty')}
+          </div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
             <thead>
@@ -235,13 +286,21 @@ export default function Leads() {
                     }
                   </button>
                 </th>
-                <Th onClick={() => toggleSort('company_name')}>Company <SortIcon col="company_name" /></Th>
-                <Th onClick={() => toggleSort('stage')}>Stage <SortIcon col="stage" /></Th>
+                <Th onClick={() => toggleSort('company_name')}>
+                  Company <SortIcon col="company_name" />
+                </Th>
+                <Th onClick={() => toggleSort('stage')}>
+                  Stage <SortIcon col="stage" />
+                </Th>
                 <Th>Source</Th>
                 <Th>Contact</Th>
-                <Th onClick={() => toggleSort('estimated_gmv_month')} align="right">GMV / mo <SortIcon col="estimated_gmv_month" /></Th>
+                <Th onClick={() => toggleSort('estimated_gmv_month')} align="right">
+                  GMV / mo <SortIcon col="estimated_gmv_month" />
+                </Th>
                 <Th align="right">Prob.</Th>
-                <Th onClick={() => toggleSort('next_action_date')}>Next action <SortIcon col="next_action_date" /></Th>
+                <Th onClick={() => toggleSort('next_action_date')}>
+                  Next action <SortIcon col="next_action_date" />
+                </Th>
                 {isManager && <Th onClick={() => toggleSort('profiles')}>Rep <SortIcon col="profiles" /></Th>}
                 <Th>Entity</Th>
               </tr>
@@ -264,6 +323,7 @@ export default function Leads() {
         )}
       </div>
 
+      {/* Lead detail panel */}
       {selectedLead && (
         <LeadPanel leadId={selectedLead.id} onClose={() => setSelectedLead(null)} />
       )}
@@ -271,10 +331,26 @@ export default function Leads() {
   )
 }
 
+// ── Table sub-components ──────────────────────────────────────
 function Th({ children, onClick, align = 'left' }) {
   return (
-    <th onClick={onClick} style={{ padding: '8px 12px', textAlign: align, fontWeight: 600, fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--border-default)', cursor: onClick ? 'pointer' : 'default', userSelect: 'none', whiteSpace: 'nowrap' }}>
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>{children}</span>
+    <th
+      onClick={onClick}
+      style={{
+        padding: '8px 12px',
+        textAlign: align,
+        fontWeight: 600, fontSize: '11px',
+        color: 'var(--text-muted)',
+        textTransform: 'uppercase', letterSpacing: '0.04em',
+        borderBottom: '1px solid var(--border-default)',
+        cursor: onClick ? 'pointer' : 'default',
+        userSelect: 'none',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+        {children}
+      </span>
     </th>
   )
 }
@@ -287,56 +363,109 @@ function LeadRow({ lead, isManager, lang, t, onClick, isSelected, onSelect }) {
     : null
 
   return (
-    <tr onClick={onClick} style={{ cursor: 'pointer', borderBottom: '1px solid var(--border-default)', background: isSelected ? 'rgba(34,197,94,0.05)' : 'transparent' }}
+    <tr
+      onClick={onClick}
+      style={{ cursor: 'pointer', borderBottom: '1px solid var(--border-default)', background: isSelected ? 'rgba(34,197,94,0.05)' : 'transparent' }}
       onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'var(--bg-hover)' }}
-      onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent' }}>
+      onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent' }}
+    >
+      {/* Checkbox */}
       <td style={{ padding: '9px 4px 9px 14px', width: '32px' }} onClick={onSelect}>
         {isSelected
           ? <CheckSquare size={14} style={{ color: 'var(--brand-green)', display: 'block' }} />
           : <Square size={14} style={{ color: 'var(--text-muted)', display: 'block', opacity: 0.4 }} />
         }
       </td>
+
+      {/* Company */}
       <td style={{ padding: '9px 12px', maxWidth: '200px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
           {lead.is_sna && <AlertTriangle size={11} color="#ef4444" style={{ flexShrink: 0 }} />}
-          <span style={{ fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.company_name}</span>
+          <span style={{ fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {lead.company_name}
+          </span>
         </div>
       </td>
+
+      {/* Stage */}
       <td style={{ padding: '9px 12px', whiteSpace: 'nowrap' }}>
-        <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 7px', borderRadius: '4px', background: stageColor + '22', color: stageColor }}>
-          {t('stage.' + lead.stage)}
+        <span style={{
+          fontSize: '10px', fontWeight: 600, padding: '2px 7px', borderRadius: '4px',
+          background: `${stageColor}22`, color: stageColor,
+        }}>
+          {t(`stage.${lead.stage}`)}
         </span>
       </td>
+
+      {/* Source */}
       <td style={{ padding: '9px 12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-        {lead.lead_source && lead.lead_source !== 'unknown' ? t('source.' + lead.lead_source) : '—'}
+        {lead.lead_source && lead.lead_source !== 'unknown' ? t(`source.${lead.lead_source}`) : '—'}
       </td>
+
+      {/* Contact */}
       <td style={{ padding: '9px 12px', color: 'var(--text-secondary)', maxWidth: '160px' }}>
-        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.contact_name ?? '—'}</div>
-        {lead.contact_title && <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.contact_title}</div>}
+        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {lead.contact_name ?? '—'}
+        </div>
+        {lead.contact_title && (
+          <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {lead.contact_title}
+          </div>
+        )}
       </td>
+
+      {/* GMV */}
       <td style={{ padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
         {lead.estimated_gmv_month ? (
           <div>
-            <div style={{ color: 'var(--brand-green)', fontWeight: 700 }}>{formatEGP(lead.estimated_gmv_month)}</div>
-            {weighted && <div style={{ fontSize: '10px', color: 'var(--brand-cyan)', marginTop: '1px' }}>{formatEGP(weighted)}</div>}
+            <div style={{ color: 'var(--brand-green)', fontWeight: 700 }}>
+              {formatEGP(lead.estimated_gmv_month)}
+            </div>
+            {weighted && (
+              <div style={{ fontSize: '10px', color: 'var(--brand-cyan)', marginTop: '1px' }}>
+                {formatEGP(weighted)}
+              </div>
+            )}
           </div>
         ) : '—'}
       </td>
+
+      {/* Probability */}
       <td style={{ padding: '9px 12px', textAlign: 'right', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-        {lead.deal_success_rate != null ? lead.deal_success_rate + '%' : '—'}
+        {lead.deal_success_rate != null ? `${lead.deal_success_rate}%` : '—'}
       </td>
+
+      {/* Next action */}
       <td style={{ padding: '9px 12px', maxWidth: '180px' }}>
         {lead.next_action_date ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <Calendar size={10} color={isOverdue ? '#ef4444' : 'var(--text-muted)'} style={{ flexShrink: 0 }} />
-            <span style={{ color: isOverdue ? '#ef4444' : 'var(--text-muted)', whiteSpace: 'nowrap' }}>{formatDate(lead.next_action_date, lang)}</span>
-            {lead.next_action && <span style={{ color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>— {lead.next_action}</span>}
+            <span style={{ color: isOverdue ? '#ef4444' : 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+              {formatDate(lead.next_action_date, lang)}
+            </span>
+            {lead.next_action && (
+              <span style={{ color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                — {lead.next_action}
+              </span>
+            )}
           </div>
         ) : '—'}
       </td>
-      {isManager && <td style={{ padding: '9px 12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{lead.profiles?.full_name ?? '—'}</td>}
+
+      {/* Rep */}
+      {isManager && (
+        <td style={{ padding: '9px 12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+          {lead.profiles?.full_name ?? '—'}
+        </td>
+      )}
+
+      {/* Entity */}
       <td style={{ padding: '9px 12px' }}>
-        <span style={{ fontSize: '10px', fontWeight: 700, padding: '1px 5px', borderRadius: '3px', background: lead.entity === 'KSA' ? 'rgba(34,197,94,0.12)' : 'rgba(59,130,246,0.12)', color: lead.entity === 'KSA' ? '#22c55e' : '#3b82f6' }}>
+        <span style={{
+          fontSize: '10px', fontWeight: 700, padding: '1px 5px', borderRadius: '3px',
+          background: lead.entity === 'KSA' ? 'rgba(34,197,94,0.12)' : 'rgba(59,130,246,0.12)',
+          color: lead.entity === 'KSA' ? '#22c55e' : '#3b82f6',
+        }}>
           {lead.entity}
         </span>
       </td>
