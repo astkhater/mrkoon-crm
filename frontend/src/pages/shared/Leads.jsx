@@ -1,5 +1,5 @@
 /**
- * Leads — searchable, filterable table of all pipeline leads
+ * Leads â searchable, filterable table of all pipeline leads
  * CCO/TL: see all reps + rep filter
  * BD Rep: own leads only
  * Row click opens LeadPanel slide-in
@@ -14,7 +14,7 @@ import { formatDate, formatEGP } from '@/lib/i18n'
 import TopBar           from '@/components/layout/TopBar'
 import LeadPanel        from '@/components/pipeline/LeadPanel'
 
-// ── Constants ─────────────────────────────────────────────────
+// ââ Constants âââââââââââââââââââââââââââââââââââââââââââââââââ
 const ALL_STAGES = [
   'new_lead', 'reaching_out', 'no_response', 'meeting_done',
   'negotiation', 'prospect_active', 'prospect_cold', 'reconnect',
@@ -36,7 +36,7 @@ const STAGE_COLORS = {
   lost: '#ef4444', unqualified: '#475569',
 }
 
-// ── Data fetching ─────────────────────────────────────────────
+// ââ Data fetching âââââââââââââââââââââââââââââââââââââââââââââ
 async function fetchLeads(userId, isManager) {
   let q = supabase
     .from('leads')
@@ -61,13 +61,13 @@ async function fetchReps() {
   const { data, error } = await supabase
     .from('profiles')
     .select('id, full_name')
-    .in('role', ['bd_rep', 'am', 'tl'])
+    .in('role', ['bd_rep', 'am', 'bd_tl'])
     .order('full_name')
   if (error) throw error
   return data ?? []
 }
 
-// ── Sort helper ─────────────────────────────────────────────────────────────────────
+// ââ Sort helper âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function sortLeads(leads, key, dir) {
   if (!key) return leads
   return [...leads].sort((a, b) => {
@@ -80,7 +80,7 @@ function sortLeads(leads, key, dir) {
   })
 }
 
-// ── Component ─────────────────────────────────────────────────
+// ââ Component âââââââââââââââââââââââââââââââââââââââââââââââââ
 export default function Leads() {
   const { userId, isManager }               = useAuth()
   const { t, lang, repFilter, setRepFilter } = useApp()
@@ -202,7 +202,7 @@ export default function Leads() {
         <option value="KSA">KSA</option>
       </select>
 
-      {/* Rep filter — managers only */}
+      {/* Rep filter â managers only */}
       {isManager && (
         <select className="crm-input" style={{ fontSize: '12px', width: '140px' }}
           value={repFilter} onChange={e => {
@@ -247,7 +247,7 @@ export default function Leads() {
               className="crm-input"
               style={{ fontSize: '11px', padding: '3px 7px', height: '26px' }}
             >
-              <option value="">Move to stage…</option>
+              <option value="">Move to stageâ¦</option>
               {ALL_STAGES.map(s => <option key={s} value={s}>{s.replace(/_/g,' ')}</option>)}
             </select>
             <button
@@ -255,7 +255,7 @@ export default function Leads() {
               disabled={!bulkStage || bulkSaving}
               className="btn btn-primary btn-xs"
             >
-              {bulkSaving ? 'Saving…' : 'Apply'}
+              {bulkSaving ? 'Savingâ¦' : 'Apply'}
             </button>
             <button onClick={() => setSelected(new Set())} className="btn btn-ghost btn-xs">
               <X size={11} /> Clear
@@ -331,7 +331,7 @@ export default function Leads() {
   )
 }
 
-// ── Table sub-components ──────────────────────────────────────
+// ââ Table sub-components ââââââââââââââââââââââââââââââââââââââ
 function Th({ children, onClick, align = 'left' }) {
   return (
     <th
@@ -399,13 +399,13 @@ function LeadRow({ lead, isManager, lang, t, onClick, isSelected, onSelect }) {
 
       {/* Source */}
       <td style={{ padding: '9px 12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-        {lead.lead_source && lead.lead_source !== 'unknown' ? t(`source.${lead.lead_source}`) : '—'}
+        {lead.lead_source && lead.lead_source !== 'unknown' ? t(`source.${lead.lead_source}`) : 'â'}
       </td>
 
       {/* Contact */}
       <td style={{ padding: '9px 12px', color: 'var(--text-secondary)', maxWidth: '160px' }}>
         <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {lead.contact_name ?? '—'}
+          {lead.contact_name ?? 'â'}
         </div>
         {lead.contact_title && (
           <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -427,12 +427,12 @@ function LeadRow({ lead, isManager, lang, t, onClick, isSelected, onSelect }) {
               </div>
             )}
           </div>
-        ) : '—'}
+        ) : 'â'}
       </td>
 
       {/* Probability */}
       <td style={{ padding: '9px 12px', textAlign: 'right', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-        {lead.deal_success_rate != null ? `${lead.deal_success_rate}%` : '—'}
+        {lead.deal_success_rate != null ? `${lead.deal_success_rate}%` : 'â'}
       </td>
 
       {/* Next action */}
@@ -445,17 +445,17 @@ function LeadRow({ lead, isManager, lang, t, onClick, isSelected, onSelect }) {
             </span>
             {lead.next_action && (
               <span style={{ color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                — {lead.next_action}
+                â {lead.next_action}
               </span>
             )}
           </div>
-        ) : '—'}
+        ) : 'â'}
       </td>
 
       {/* Rep */}
       {isManager && (
         <td style={{ padding: '9px 12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-          {lead.profiles?.full_name ?? '—'}
+          {lead.profiles?.full_name ?? 'â'}
         </td>
       )}
 
