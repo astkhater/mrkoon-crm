@@ -164,7 +164,7 @@ export default function Sidebar({ onShowTour }) {
       )}
 
       {/* Rep filter selector */}
-      {showRepSelector && repsList.length > 0 && (
+      {showRepSelector && (repsList.length > 0 || repFilter) && (
         <div className="px-3 py-2 border-b b1">
           <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '.06em' }}>
             Rep View
