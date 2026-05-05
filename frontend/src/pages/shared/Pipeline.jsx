@@ -41,7 +41,7 @@ async function fetchPipelineLeads(userId, isManager, repFilter) {
       id, company_name, company_id, stage, entity,
       lead_source, is_sna,
       estimated_gmv_month, deal_success_rate,
-      next_action, next_action_date,
+      next_action, next_action_date, date_added,
       assigned_to,
       profiles:assigned_to ( full_name )
     `)
