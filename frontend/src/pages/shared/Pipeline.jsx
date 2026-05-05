@@ -281,7 +281,7 @@ function KanbanColumn({ stageKey, color, leads, label, onCardClick }) {
         {leads.length === 0 ? (
           <div style={{
             textAlign: 'center', padding: '20px 0',
-            fontSize: '11px', color: 'var(--text-muted)',
+            fontSize: '11px', color: 'var(Empty-text-muted)',
           }}>
             â
           </div>
