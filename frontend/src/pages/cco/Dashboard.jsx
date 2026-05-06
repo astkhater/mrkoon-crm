@@ -53,7 +53,7 @@ function useCCOStats(repFilter) {
           .limit(50),
         supabase.from('profiles')
           .select('id, full_name, role')
-          .in('role', ['bd_rep', 'bd_tl', 'am'])
+          .in('role', ['bd_rep', 'bd_tl', 'bd_am'])
           .order('full_name'),
         stageQ,
       ])
