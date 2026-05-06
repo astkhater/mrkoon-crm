@@ -1,4 +1,8 @@
-import { AlertTriangle, Calendar } from 'lucide-react'
+/**
+ * LeadCard — compact kanban card for the Pipeline board
+ * Displays: company name, rep (managers only), GMV × probability, source, next action date
+ */
+import { AlertTriangle, Calendar, Clock } from 'lucide-react'
 import { useApp }  from '@/contexts/AppContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { formatDate, formatEGP } from '@/lib/i18n'
@@ -20,6 +24,9 @@ export default function LeadCard({ lead, onClick }) {
   const { isManager } = useAuth()
 
   const isOverdue    = lead.next_action_date && new Date(lead.next_action_date) < new Date()
+  const daysSinceAdded = lead.date_added
+    ? Math.floor((Date.now() - new Date(lead.date_added).getTime()) / 86_400_000)
+    : null
   const weightedGMV  = lead.estimated_gmv_month && lead.deal_success_rate
     ? Math.round(lead.estimated_gmv_month * lead.deal_success_rate / 100)
     : null
@@ -55,14 +62,20 @@ export default function LeadCard({ lead, onClick }) {
           <AlertTriangle size={9} /> SNA BREACH
         </div>
       )}
-      <div style={{ fontWeight: 600, fontSize: '12px', color: 'var(--text-primary)', marginBottom: '3px', lineHeight: 1.3 }}>
+
+      <div style={{
+        fontWeight: 600, fontSize: '12px', color: 'var(--text-primary)',
+        marginBottom: '3px', lineHeight: 1.3,
+      }}>
         {lead.company_name}
       </div>
+
       {isManager && lead.profiles?.full_name && (
         <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>
           {lead.profiles.full_name}
         </div>
       )}
+
       {lead.estimated_gmv_month && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '5px', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '12px', color: 'var(--brand-green)', fontWeight: 700 }}>
@@ -71,7 +84,7 @@ export default function LeadCard({ lead, onClick }) {
           {lead.deal_success_rate != null && (
             <>
               <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                ×{lead.deal_success_rate}%
+                x{lead.deal_success_rate}%
               </span>
               {weightedGMV && (
                 <span style={{ fontSize: '11px', color: 'var(--brand-cyan)' }}>
@@ -82,6 +95,7 @@ export default function LeadCard({ lead, onClick }) {
           )}
         </div>
       )}
+
       {lead.lead_source && lead.lead_source !== 'unknown' && (
         <div style={{ marginBottom: '5px' }}>
           <span style={{
@@ -93,16 +107,33 @@ export default function LeadCard({ lead, onClick }) {
           </span>
         </div>
       )}
+
       {lead.next_action_date && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px',
-          color: isOverdue ? '#ef4444' : 'var(--text-muted)' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '4px',
+          fontSize: '11px',
+          color: isOverdue ? '#ef4444' : 'var(--text-muted)',
+        }}>
           <Calendar size={10} />
           <span>{formatDate(lead.next_action_date, lang)}</span>
           {lead.next_action && (
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>
-              — {lead.next_action}
+            <span style={{
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              maxWidth: '120px',
+            }}>
+              {' · '}{lead.next_action}
             </span>
           )}
+        </div>
+      )}
+
+      {daysSinceAdded !== null && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '4px',
+          fontSize: '10px', color: 'var(--text-muted)', marginTop: '3px',
+        }}>
+          <Clock size={9} />
+          <span>{daysSinceAdded}d in CRM</span>
         </div>
       )}
     </div>
