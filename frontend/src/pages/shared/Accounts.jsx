@@ -36,7 +36,7 @@ async function fetchAccounts(userId, isManager) {
 }
 
 async function fetchReps() {
-  const { data, error } = await supabase.from('profiles').select('id, full_name').in('role', ['bd_rep','am','bd_tl']).order('full_name')
+  const { data, error } = await supabase.from('profiles').select('id, full_name').in('role', ['bd_rep','bd_am','bd_tl']).order('full_name')
   if (error) throw error
   return data ?? []
 }
