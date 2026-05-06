@@ -81,7 +81,7 @@ export function AuthProvider({ children }) {
             userId: session?.user?.id ?? null,
         }}>
             {children}
-        <\/AuthContext.Provider>
+        </AuthContext.Provider>
     )
 }
 
