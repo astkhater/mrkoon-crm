@@ -75,4 +75,18 @@ export function AuthProvider({ children }) {
           <AuthContext.Provider value={{
                     session, profile, loading,
                     signIn, signOut, resetPassword,
-                    role, isAdmin, isCCO, isCEO, isCOO, isT
+                    role, isAdmin, isCCO, isCEO, isCOO, isTL, isBDRep, isAM,
+            isExecutive, isManager, canImport, isBDMode,
+            viewMode, entityView, setViewMode, setEntityView,
+            userId: session?.user?.id ?? null,
+        }}>
+            {children}
+        <\/AuthContext.Provider>
+    )
+}
+
+export function useAuth() {
+  const ctx = useContext(AuthContext)
+  if (!ctx) throw new Error('useAuth must be used inside AuthProvider')
+  return ctx
+}
