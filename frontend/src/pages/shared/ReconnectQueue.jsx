@@ -14,7 +14,6 @@ import { formatDate }    from '@/lib/i18n'
 import TopBar            from '@/components/layout/TopBar'
 import LeadPanel         from '@/components/pipeline/LeadPanel'
 
-// ── Data fetching ─────────────────────────────────────────────
 async function fetchReconnectLeads(userId, isManager, repFilter) {
   let q = supabase
     .from('leads')
@@ -39,7 +38,6 @@ async function fetchReconnectLeads(userId, isManager, repFilter) {
   return data ?? []
 }
 
-// ── Component ─────────────────────────────────────────────────
 export default function ReconnectQueue() {
   const { userId, isManager }               = useAuth()
   const { t, lang, repFilter }              = useApp()
@@ -63,7 +61,6 @@ export default function ReconnectQueue() {
 
   async function quickLog(lead, type) {
     if (loggingId === lead.id) {
-      // Commit the log
       setLogSaving(true)
       try {
         await supabase.from('activities').insert({
@@ -98,7 +95,6 @@ export default function ReconnectQueue() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <TopBar title={t('nav.reconnect')} actions={actions} />
 
-      {/* Overdue banner */}
       {!isLoading && overdue.length > 0 && (
         <div style={{
           padding: '8px 18px', flexShrink: 0,
@@ -126,46 +122,22 @@ export default function ReconnectQueue() {
         </div>
       ) : (
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
-          {/* Overdue section */}
           {overdue.length > 0 && (
             <Section
-              title="Overdue"
-              count={overdue.length}
-              color="#ef4444"
-              leads={overdue}
-              isManager={isManager}
-              lang={lang}
-              t={t}
-              loggingId={loggingId}
-              logType={logType}
-              logBody={logBody}
-              logSaving={logSaving}
-              setLogBody={setLogBody}
-              onQuickLog={quickLog}
-              onCancelLog={() => setLoggingId(null)}
-              onOpenPanel={setSelectedLead}
+              title="Overdue" count={overdue.length} color="#ef4444" leads={overdue}
+              isManager={isManager} lang={lang} t={t}
+              loggingId={loggingId} logType={logType} logBody={logBody} logSaving={logSaving}
+              setLogBody={setLogBody} onQuickLog={quickLog}
+              onCancelLog={() => setLoggingId(null)} onOpenPanel={setSelectedLead}
             />
           )}
-
-          {/* Upcoming section */}
           {upcoming.length > 0 && (
             <Section
-              title="Upcoming"
-              count={upcoming.length}
-              color="var(--text-muted)"
-              leads={upcoming}
-              isManager={isManager}
-              lang={lang}
-              t={t}
-              loggingId={loggingId}
-              logType={logType}
-              logBody={logBody}
-              logSaving={logSaving}
-              setLogBody={setLogBody}
-              onQuickLog={quickLog}
-              onCancelLog={() => setLoggingId(null)}
-              onOpenPanel={setSelectedLead}
+              title="Upcoming" count={upcoming.length} color="var(--text-muted)" leads={upcoming}
+              isManager={isManager} lang={lang} t={t}
+              loggingId={loggingId} logType={logType} logBody={logBody} logSaving={logSaving}
+              setLogBody={setLogBody} onQuickLog={quickLog}
+              onCancelLog={() => setLoggingId(null)} onOpenPanel={setSelectedLead}
             />
           )}
         </div>
@@ -178,7 +150,6 @@ export default function ReconnectQueue() {
   )
 }
 
-// ── Section ───────────────────────────────────────────────────
 function Section({ title, count, color, leads, isManager, lang, t, loggingId, logType, logBody, logSaving, setLogBody, onQuickLog, onCancelLog, onOpenPanel }) {
   return (
     <div>
@@ -199,19 +170,10 @@ function Section({ title, count, color, leads, isManager, lang, t, loggingId, lo
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
         {leads.map(lead => (
           <ReconnectRow
-            key={lead.id}
-            lead={lead}
-            isManager={isManager}
-            lang={lang}
-            t={t}
-            isLogging={loggingId === lead.id}
-            logType={logType}
-            logBody={logBody}
-            logSaving={logSaving}
-            setLogBody={setLogBody}
-            onQuickLog={onQuickLog}
-            onCancelLog={onCancelLog}
-            onOpenPanel={onOpenPanel}
+            key={lead.id} lead={lead} isManager={isManager} lang={lang} t={t}
+            isLogging={loggingId === lead.id} logType={logType} logBody={logBody}
+            logSaving={logSaving} setLogBody={setLogBody}
+            onQuickLog={onQuickLog} onCancelLog={onCancelLog} onOpenPanel={onOpenPanel}
           />
         ))}
       </div>
@@ -219,7 +181,6 @@ function Section({ title, count, color, leads, isManager, lang, t, loggingId, lo
   )
 }
 
-// ── Row ───────────────────────────────────────────────────────
 function ReconnectRow({ lead, isManager, lang, t, isLogging, logType, logBody, logSaving, setLogBody, onQuickLog, onCancelLog, onOpenPanel }) {
   const isOverdue = lead.next_action_date && new Date(lead.next_action_date) < new Date()
 
@@ -231,7 +192,6 @@ function ReconnectRow({ lead, isManager, lang, t, isLogging, logType, logBody, l
       padding: '12px 14px',
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px' }}>
-        {/* Left: company + meta */}
         <div
           style={{ flex: 1, cursor: 'pointer', minWidth: 0 }}
           onClick={() => onOpenPanel(lead)}
@@ -269,14 +229,18 @@ function ReconnectRow({ lead, isManager, lang, t, isLogging, logType, logBody, l
               </span>
             )}
             {isManager && lead.profiles?.full_name && (
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                Rep: {lead.profiles.full_name}
+              <span style={{
+                fontSize: '11px', fontWeight: 600,
+                color: 'var(--brand-cyan)',
+                padding: '1px 6px', borderRadius: '4px',
+                background: 'rgba(34,211,238,0.08)',
+              }}>
+                {lead.profiles.full_name}
               </span>
             )}
           </div>
         </div>
 
-        {/* Right: quick-log buttons */}
         {!isLogging && (
           <div style={{ display: 'flex', gap: '5px', flexShrink: 0 }}>
             <button
@@ -299,7 +263,6 @@ function ReconnectRow({ lead, isManager, lang, t, isLogging, logType, logBody, l
         )}
       </div>
 
-      {/* Inline log form */}
       {isLogging && (
         <div style={{ marginTop: '10px', borderTop: '1px solid var(--border-default)', paddingTop: '10px' }}>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px' }}>
@@ -319,7 +282,7 @@ function ReconnectRow({ lead, isManager, lang, t, isLogging, logType, logBody, l
               onClick={() => onQuickLog(lead, logType)}
               disabled={logSaving}
             >
-              {logSaving ? 'Saving…' : 'Save'}
+              {logSaving ? 'Saving...' : 'Save'}
             </button>
             <button className="btn btn-ghost btn-xs" onClick={onCancelLog}>
               Cancel
