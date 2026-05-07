@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { formatEGP, formatDate } from '@/lib/i18n'
 
-const STAGE_COLORS = {
+const STACE_COLORS = {
   new_lead: '#64748b',       reaching_out: '#3b82f6',
   no_response: '#6366f1',    meeting_done: '#8b5cf6',
   negotiation: '#f59e0b',    prospect_active: '#22d3ee',
@@ -42,7 +42,9 @@ function useBDStats(userId) {
       return { byStage, totalLeads, weightedGMV, pipeline: pipeline ?? [], todayActions: todayActions ?? [] }
     },
     enabled: !!userId,
+    staleTime: 120_000,
     refetchInterval: 120_000,
+    refetchOnWindowFocus: false,
   })
 }
 
@@ -51,7 +53,7 @@ function StageChip({ stage, count }) {
   const label = stage.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '7px 12px', borderRadius: '6px', background: color + '12', border: '1px solid ' + color + '30' }}>
+      padding: '7px 12px', borderRadius: '6px', background: `${color}12`, border: `1px solid ${color}30` }}>
       <span style={{ fontSize: '12px', color, fontWeight: 600 }}>{label}</span>
       <span style={{ fontSize: '14px', fontWeight: 700, color }}>{count}</span>
     </div>
@@ -69,7 +71,7 @@ function ActionRow({ lead }) {
         {lead.contact_name && <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{lead.contact_name}</div>}
         {lead.next_action && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px' }}>{lead.next_action}</div>}
       </div>
-      {lead.phone && <a href={'tel:' + lead.phone} className="btn btn-ghost btn-icon" title="Call"><Phone size={13} /></a>}
+      {lead.phone && <a href={`tel:${lead.phone}`} className="btn btn-ghost btn-icon" title="Call"><Phone size={13} /></a>}
     </div>
   )
 }
@@ -85,9 +87,9 @@ function groupByDate(leads, lang) {
   }
   return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([date, items]) => ({
     date,
-    label: date < today  ? 'Overdue (' + formatDate(date, lang) + ')'
-         : date === today ? 'Today - ' + formatDate(date, lang)
-         : date === tomorrow ? 'Tomorrow - ' + formatDate(date, lang)
+    label: date < today  ? `Overdue (${formatDate(date, lang)})`
+         : date === today ? `Today - ${formatDate(date, lang)}`
+         : date === tomorrow ? `Tomorrow - ${formatDate(date, lang)}`
          : formatDate(date, lang),
     overdue: date < today,
     items,
@@ -164,9 +166,4 @@ export default function BDDashboard() {
                 ))
               })()}
             </div>
-          </div>
-        </div>
-      </div>
-    </>
-  )
-}
+  
