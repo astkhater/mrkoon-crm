@@ -10,7 +10,7 @@ import { useAuth }     from '@/contexts/AuthContext'
 import { useApp }      from '@/contexts/AppContext'
 import { formatDate, formatEGP } from '@/lib/i18n'
 
-// Constants
+// ── Constants ─────────────────────────────────────────────────
 const ALL_PIPELINE_STAGES = [
   'new_lead', 'reaching_out', 'no_response', 'meeting_done',
   'negotiation', 'prospect_active', 'prospect_cold', 'reconnect',
@@ -40,7 +40,7 @@ const ACTIVITY_TYPE_LABELS = {
   email: 'Email', document: 'Doc', stage_change: 'Stage', status_change: 'Status', sna_alert: 'SNA',
 }
 
-// Data hooks
+// ── Data hooks ────────────────────────────────────────────────
 function useLead(leadId) {
   return useQuery({
     queryKey: ['lead', leadId],
@@ -74,7 +74,7 @@ function useActivities(leadId) {
   })
 }
 
-// Sub-components
+// ── Sub-components ────────────────────────────────────────────
 function InfoRow({ label, value, icon: Icon, alert }) {
   if (!value) return null
   return (
@@ -98,21 +98,25 @@ function ActivityItem({ activity, lang }) {
         {ACTIVITY_TYPE_LABELS[activity.action_type] ?? activity.action_type}
       </span>
       <div style={{ flex: 1, minWidth: 0 }}>
+        {/* Stage change */}
         {activity.stage_from && activity.stage_to && (
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>
             {t('stage.' + activity.stage_from) + ' → ' + t('stage.' + activity.stage_to)}
           </div>
         )}
+        {/* Body */}
         {activity.body && (
           <div style={{ fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.5, wordBreak: 'break-word' }}>
             {activity.body}
           </div>
         )}
+        {/* Contact */}
         {activity.contact_person && (
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px' }}>
             {'with ' + activity.contact_person + (activity.contact_title ? ', ' + activity.contact_title : '')}
           </div>
         )}
+        {/* Meta */}
         <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>
           {activity.profiles?.full_name} · {formatDate(activity.created_at, lang)}
         </div>
@@ -121,13 +125,13 @@ function ActivityItem({ activity, lang }) {
   )
 }
 
-// Main component
+// ── Main component ────────────────────────────────────────────
 export default function LeadPanel({ leadId, onClose }) {
   const { t, lang, toast } = useApp()
   const { userId }         = useAuth()
   const queryClient        = useQueryClient()
 
-  const [showStageMenu,  setShowStageMenu]  = useState(false)
+  const [showSt!geMenu,  setShowStageMenu]  = useState(false)
   const [actType,        setActType]        = useState('note')
   const [actBody,        setActBody]        = useState('')
   const [actContact,     setActContact]     = useState('')
@@ -135,6 +139,10 @@ export default function LeadPanel({ leadId, onClose }) {
   const [saving,         setSaving]         = useState(false)
   const [editDealValue,  setEditDealValue]  = useState(false)
   const [dealValueInput, setDealValueInput] = useState('')
+  const [editGMV,        setEditGMV]        = useState(false)
+  const [gmvInput,       setGmvInput]       = useState('')
+  const [editProb,       setEditProb]       = useState(false)
+  const [probInput,      setProbInput]      = useState('')
 
   const { data: lead,       isLoading } = useLead(leadId)
   const { data: activities = []       } = useActivities(leadId)
@@ -143,6 +151,7 @@ export default function LeadPanel({ leadId, onClose }) {
     ? Math.round(lead.estimated_gmv_month * lead.deal_success_rate / 100)
     : null
 
+  // ── Stage change ──────────────────────────────────────────
   async function changeStage(newStage) {
     const { error } = await supabase.from('leads').update({ stage: newStage }).eq('id', leadId)
     if (error) { toast(error.message, 'error'); return }
@@ -153,6 +162,7 @@ export default function LeadPanel({ leadId, onClose }) {
     toast('Stage updated', 'success')
   }
 
+  // ── Save deal value ───────────────────────────────────────
   async function saveDealValue() {
     const val = parseFloat(dealValueInput)
     if (isNaN(val) && dealValueInput.trim() !== '') return
@@ -165,6 +175,36 @@ export default function LeadPanel({ leadId, onClose }) {
     toast('Deal value saved', 'success')
   }
 
+  // ── Save GMV / probability ────────────────────────────────
+  async function saveGMV() {
+    const val = parseFloat(gmvInput)
+    if (isNaN(val) && gmvInput.trim() !== '') return
+    const { error } = await supabase.from('leads')
+      .update({ estimated_gmv_month: gmvInput.trim() === '' ? null : val })
+      .eq('id', leadId)
+    if (error) { toast(error.message, 'error'); return }
+    queryClient.invalidateQueries({ queryKey: ['lead', leadId] })
+    queryClient.invalidateQueries({ queryKey: ['pipeline-leads'] })
+    queryClient.invalidateQueries({ queryKey: ['bd-stats'] })
+    setEditGMV(false)
+    toast('GMV saved', 'success')
+  }
+
+  async function saveProb() {
+    const val = parseFloat(probInput)
+    if (isNaN(val) || val < 0 || val > 100) return
+    const { error } = await supabase.from('leads')
+      .update({ deal_success_rate: val })
+      .eq('id', leadId)
+    if (error) { toast(error.message, 'error'); return }
+    queryClient.invalidateQueries({ queryKey: ['lead', leadId] })
+    queryClient.invalidateQueries({ queryKey: ['pipeline-leads'] })
+    queryClient.invalidateQueries({ queryKey: ['bd-stats'] })
+    setEditProb(false)
+    toast('Probability saved', 'success')
+  }
+
+  // ── Log activity ───────────────────────────────────────────
   async function handleLogActivity(e) {
     e.preventDefault()
     if (!actBody.trim()) return
@@ -208,7 +248,7 @@ export default function LeadPanel({ leadId, onClose }) {
           </div>
         ) : (
           <>
-            {/* Header */}
+            {/* ── Header ─────────────────────────────────── */}
             <div style={{
               padding: '14px 18px', flexShrink: 0,
               borderBottom: '1px solid var(--border-default)',
@@ -219,6 +259,7 @@ export default function LeadPanel({ leadId, onClose }) {
                   <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px', lineHeight: 1.3 }}>
                     {lead.company_name}
                   </div>
+                  {/* Stage selector */}
                   <div style={{ position: 'relative', display: 'inline-block' }}>
                     <button
                       onClick={() => setShowStageMenu(v => !v)}
@@ -267,9 +308,10 @@ export default function LeadPanel({ leadId, onClose }) {
               </div>
             </div>
 
-            {/* Scrollable body */}
+            {/* ── Scrollable body ─────────────────────────── */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 18px' }}>
 
+              {/* Info grid */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 20px', marginBottom: '16px' }}>
                 <InfoRow label="Assigned To" value={lead.profiles?.full_name} icon={User} />
                 <InfoRow label="Source"      value={t('source.' + (lead.lead_source ?? 'unknown'))} />
@@ -295,22 +337,64 @@ export default function LeadPanel({ leadId, onClose }) {
                   Pipeline Value
                 </div>
                 <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                  {lead.estimated_gmv_month && (
-                    <div>
-                      <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Est. GMV/mo</div>
-                      <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--brand-green)' }}>
-                        {formatEGP(lead.estimated_gmv_month)}
-                      </div>
+                  {/* Est. GMV/mo — editable */}
+                  <div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '2px' }}>
+                      Est. GMV/mo
+                      {!editGMV && (
+                        <button onClick={() => { setGmvInput(lead.estimated_gmv_month ?? ''); setEditGMV(true) }}
+                          style={{ marginLeft: '6px', fontSize: '10px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--brand-cyan)' }}>
+                          edit
+                        </button>
+                      )}
                     </div>
-                  )}
-                  {lead.deal_success_rate != null && (
-                    <div>
-                      <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Probability</div>
-                      <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                        {lead.deal_success_rate}%
+                    {editGMV ? (
+                      <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+                        <input className="crm-input" type="number" placeholder="0" value={gmvInput}
+                          onChange={e => setGmvInput(e.target.value)}
+                          style={{ width: '110px', height: '28px', fontSize: '12px', padding: '4px 8px' }}
+                          autoFocus
+                          onKeyDown={e => { if (e.key === 'Enter') saveGMV(); if (e.key === 'Escape') setEditGMV(false) }}
+                        />
+                        <button onClick={saveGMV} className="btn btn-primary btn-xs">Save</button>
+                        <button onClick={() => setEditGMV(false)} className="btn btn-ghost btn-xs">Cancel</button>
                       </div>
+                    ) : (
+                      <div style={{ fontSize: '17px', fontWeight: 700, color: lead.estimated_gmv_month ? 'var(--brand-green)' : 'var(--text-muted)' }}>
+                        {lead.estimated_gmv_month ? formatEGP(lead.estimated_gmv_month) : '—'}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Probability — editable */}
+                  <div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '2px' }}>
+                      Probability
+                      {!editProb && (
+                        <button onClick={() => { setProbInput(lead.deal_success_rate ?? ''); setEditProb(true) }}
+                          style={{ marginLeft: '6px', fontSize: '10px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--brand-cyan)' }}>
+                          edit
+                        </button>
+                      )}
                     </div>
-                  )}
+                    {editProb ? (
+                      <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+                        <input className="crm-input" type="number" placeholder="0" min="0" max="100" value={probInput}
+                          onChange={e => setProbInput(e.target.value)}
+                          style={{ width: '80px', height: '28px', fontSize: '12px', padding: '4px 8px' }}
+                          autoFocus
+                          onKeyDown={e => { if (e.key === 'Enter') saveProb(); if (e.key === 'Escape') setEditProb(false) }}
+                        />
+                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>%</span>
+                        <button onClick={saveProb} className="btn btn-primary btn-xs">Save</button>
+                        <button onClick={() => setEditProb(false)} className="btn btn-ghost btn-xs">Cancel</button>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '17px', fontWeight: 700, color: lead.deal_success_rate != null ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                        {lead.deal_success_rate != null ? lead.deal_success_rate + '%' : '—'}
+                      </div>
+                    )}
+                  </div>
                   {weightedGMV != null && (
                     <div>
                       <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Weighted GMV</div>
@@ -319,6 +403,7 @@ export default function LeadPanel({ leadId, onClose }) {
                       </div>
                     </div>
                   )}
+                  {/* Deal value — always shown, editable */}
                   <div>
                     <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '2px' }}>
                       Deal Value
@@ -342,95 +427,4 @@ export default function LeadPanel({ leadId, onClose }) {
                           onKeyDown={e => { if (e.key === 'Enter') saveDealValue(); if (e.key === 'Escape') setEditDealValue(false) }}
                         />
                         <button onClick={saveDealValue} className="btn btn-primary btn-xs">Save</button>
-                        <button onClick={() => setEditDealValue(false)} className="btn btn-ghost btn-xs">Cancel</button>
-                      </div>
-                    ) : (
-                      <div style={{ fontSize: '17px', fontWeight: 700, color: lead.deal_value ? '#a78bfa' : 'var(--text-muted)' }}>
-                        {lead.deal_value ? formatEGP(lead.deal_value) : '—'}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {lead.notes && (
-                <div className="crm-card" style={{ marginBottom: '16px', padding: '12px 14px' }}>
-                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
-                    Notes
-                  </div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-                    {lead.notes}
-                  </div>
-                </div>
-              )}
-
-              {/* Log Activity form */}
-              <div className="crm-card" style={{ marginBottom: '16px', padding: '14px' }}>
-                <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
-                  Log Activity
-                </div>
-                <form onSubmit={handleLogActivity}>
-                  <div style={{ display: 'flex', gap: '5px', marginBottom: '10px', flexWrap: 'wrap' }}>
-                    {ACTIVITY_TYPES.map(({ key }) => (
-                      <button key={key} type="button"
-                        onClick={() => setActType(key)}
-                        className={'btn btn-xs ' + (actType === key ? 'btn-primary' : 'btn-secondary')}
-                      >
-                        {ACTIVITY_TYPE_LABELS[key]}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
-                    <input
-                      className="crm-input"
-                      style={{ height: '32px', fontSize: '12px' }}
-                      placeholder="Contact name (optional)"
-                      value={actContact}
-                      onChange={e => setActContact(e.target.value)}
-                    />
-                    <input
-                      className="crm-input"
-                      style={{ height: '32px', fontSize: '12px' }}
-                      placeholder="Title (optional)"
-                      value={actTitle}
-                      onChange={e => setActTitle(e.target.value)}
-                    />
-                  </div>
-
-                  <textarea
-                    className="crm-input"
-                    placeholder={actType.replace('_', ' ') + ' notes...'}
-                    value={actBody}
-                    onChange={e => setActBody(e.target.value)}
-                    rows={3}
-                    required
-                    style={{ height: 'auto', resize: 'vertical', marginBottom: '8px', padding: '8px 12px', lineHeight: 1.5 }}
-                  />
-
-                  <button type="submit" className="btn btn-primary btn-sm" disabled={saving || !actBody.trim()}>
-                    {saving ? 'Saving...' : 'Save'}
-                  </button>
-                </form>
-              </div>
-
-              {/* Activity log */}
-              <div>
-                <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
-                  {'Activity Log (' + activities.length + ')'}
-                </div>
-                {activities.length === 0 ? (
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center', padding: '20px 0' }}>
-                    No activities yet
-                  </div>
-                ) : (
-                  activities.map(a => <ActivityItem key={a.id} activity={a} lang={lang} />)
-                )}
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-    </>
-  )
-}
+                        <button onClick={() => setEditDealValue(false)} className="btn btn-ghost btn-xs">Ca
