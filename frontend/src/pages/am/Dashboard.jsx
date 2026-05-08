@@ -20,17 +20,22 @@ function useAMStats(userId) {
         { data: renewalAlerts },
         { data: snaClients },
       ] = await Promise.all([
+        // My active accounts
         supabase
           .from('accounts')
           .select('id, lead_id, am_id, contracted_gmv_month, realized_gmv, contract_start_date, contract_end_date, handoff_due_date, leads(company_name, contact_name, phone, stage)')
           .eq('am_id', userId)
           .eq('status', 'active'),
+
+        // Pending handoffs assigned to me (bd_am_id = null = unaccepted)
         supabase
           .from('accounts')
           .select('id, lead_id, contracted_gmv_month, handoff_due_date, leads(company_name, contact_name)')
           .is('am_id', null)
           .lte('handoff_due_date', new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString().slice(0, 10))
           .order('handoff_due_date'),
+
+        // Renewals due in next 30 days
         supabase
           .from('accounts')
           .select('id, lead_id, contract_end_date, contracted_gmv_month, leads(company_name)')
@@ -39,6 +44,8 @@ function useAMStats(userId) {
           .lte('contract_end_date', new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10))
           .gte('contract_end_date', today)
           .order('contract_end_date'),
+
+        // SNA clients in my portfolio
         supabase
           .from('leads')
           .select('id, company_name, contact_name, stage, sna_since')
@@ -67,6 +74,7 @@ function useAMStats(userId) {
   })
 }
 
+// Capacity bar: green < 70%, amber 70-90%, red >= 90%
 function CapacityBar({ count, pct }) {
   const color = pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : 'var(--brand-green)'
   return (
@@ -82,7 +90,7 @@ function CapacityBar({ count, pct }) {
       <div style={{ height: '6px', borderRadius: '3px', background: 'var(--border-default)' }}>
         <div style={{
           height: '100%', borderRadius: '3px',
-          width: (Math.min(pct, 100)) + '%',
+          width: `${Math.min(pct, 100)}%`,
           background: color,
           transition: 'width 400ms ease',
         }} />
@@ -211,6 +219,7 @@ export default function AMDashboard() {
       <TopBar title={t('am.title')} />
       <div className="page-content">
 
+        {/* SNA alert banner */}
         {data.snaClients.length > 0 && (
           <div style={{
             padding: '12px 16px', borderRadius: '8px', marginBottom: '20px',
@@ -224,6 +233,7 @@ export default function AMDashboard() {
           </div>
         )}
 
+        {/* KPI strip */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginBottom: '20px' }}>
           <div className="kpi-card">
             <div className="kpi-label">{t('am.portfolio')}</div>
@@ -266,6 +276,7 @@ export default function AMDashboard() {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
 
+          {/* Pending handoffs */}
           <div className="crm-card" style={{ padding: 0 }}>
             <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: '13px', fontWeight: 600 }}>{t('am.pending_handoffs')}</span>
@@ -285,7 +296,10 @@ export default function AMDashboard() {
             )}
           </div>
 
+          {/* Right column: renewals + SNA */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+            {/* Renewals */}
             <div className="crm-card" style={{ padding: 0 }}>
               <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border-default)' }}>
                 <span style={{ fontSize: '13px', fontWeight: 600 }}>{t('am.renewals_due')} <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>— next 30 days</span></span>
@@ -297,6 +311,7 @@ export default function AMDashboard() {
               )}
             </div>
 
+            {/* SNA clients */}
             {data.snaClients.length > 0 && (
               <div className="crm-card" style={{ padding: 0 }}>
                 <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border-default)' }}>
@@ -305,6 +320,7 @@ export default function AMDashboard() {
                 {data.snaClients.map(l => <SnaRow key={l.id} lead={l} />)}
               </div>
             )}
+
           </div>
         </div>
       </div>
