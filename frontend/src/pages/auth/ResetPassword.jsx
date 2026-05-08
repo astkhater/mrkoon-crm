@@ -13,9 +13,11 @@ export default function ResetPassword() {
   const [ready, setReady]     = useState(false)
 
   useEffect(() => {
+    // Supabase fires PASSWORD_RECOVERY when the link is valid
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') setReady(true)
     })
+    // If the hash is already processed (page reload), check session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) setReady(true)
     })
@@ -68,6 +70,7 @@ export default function ResetPassword() {
     }}>
       <div style={{ width: '100%', maxWidth: '380px' }}>
         {logoBlock}
+
         <div className="crm-card" style={{ padding: '28px' }}>
           {!ready ? (
             <div style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '14px' }}>
@@ -81,29 +84,54 @@ export default function ResetPassword() {
               <div style={{ marginBottom: '20px', fontSize: '13px', color: 'var(--text-secondary)' }}>
                 Must be at least 6 characters.
               </div>
+
               <div style={{ marginBottom: '16px' }}>
                 <label className="crm-label">New password</label>
-                <input type="password" className="crm-input" value={pass}
-                  onChange={e => setPass(e.target.value)} placeholder="••••••••" required autoFocus />
+                <input
+                  type="password"
+                  className="crm-input"
+                  value={pass}
+                  onChange={e => setPass(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  autoFocus
+                />
               </div>
+
               <div style={{ marginBottom: '20px' }}>
                 <label className="crm-label">Confirm password</label>
-                <input type="password" className="crm-input" value={confirm}
-                  onChange={e => setConfirm(e.target.value)} placeholder="••••••••" required />
+                <input
+                  type="password"
+                  className="crm-input"
+                  value={confirm}
+                  onChange={e => setConfirm(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                />
               </div>
+
               {err && (
                 <div style={{
                   padding: '10px 12px', borderRadius: '6px', marginBottom: '16px',
                   background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
                   color: '#ef4444', fontSize: '13px',
-                }}>{err}</div>
+                }}>
+                  {err}
+                </div>
               )}
-              <button type="submit" disabled={busy} className="btn btn-primary btn-lg" style={{ width: '100%' }}>
+
+              <button
+                type="submit"
+                disabled={busy}
+                className="btn btn-primary btn-lg"
+                style={{ width: '100%' }}
+              >
                 {busy ? 'Saving…' : 'Set new password'}
               </button>
             </form>
           )}
         </div>
+
         <div style={{ textAlign: 'center', marginTop: '24px', fontSize: '11px', color: 'var(--text-muted)' }}>
           Mrkoon BD CRM v1  •  Egypt
         </div>
