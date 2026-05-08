@@ -1,5 +1,5 @@
 /**
- * Leads â searchable, filterable table of all pipeline leads
+ * Leads — searchable, filterable table of all pipeline leads
  * CCO/TL: see all reps + rep filter
  * BD Rep: own leads only
  * Row click opens LeadPanel slide-in
@@ -14,7 +14,7 @@ import { formatDate, formatEGP } from '@/lib/i18n'
 import TopBar           from '@/components/layout/TopBar'
 import LeadPanel        from '@/components/pipeline/LeadPanel'
 
-// ââ Constants âââââââââââââââââââââââââââââââââââââââââââââââââ
+// ── Constants ─────────────────────────────────────────────────
 const ALL_STAGES = [
   'new_lead', 'reaching_out', 'no_response', 'meeting_done',
   'negotiation', 'prospect_active', 'prospect_cold', 'reconnect',
@@ -27,7 +27,7 @@ const SOURCES = [
   'platform_app', 'exhibition', 'linkedin', 'facebook_instagram',
 ]
 
-const STAGE_COLORS = {
+const STACE_COLORS = {
   new_lead: '#64748b', reaching_out: '#3b82f6', no_response: '#6366f1',
   meeting_done: '#8b5cf6', negotiation: '#f59e0b',
   prospect_active: '#22c55e', prospect_cold: '#94a3b8',
@@ -36,8 +36,8 @@ const STAGE_COLORS = {
   lost: '#ef4444', unqualified: '#475569',
 }
 
-// ââ Data fetching âââââââââââââââââââââââââââââââââââââââââââââ
-async function fetchLeads(userId, isManager) {
+// ── Data fetching ─────────────────────────────────────────────
+async function fetchLeads(userId, isManager, entityFilter) {
   let q = supabase
     .from('leads')
     .select(`
@@ -51,23 +51,26 @@ async function fetchLeads(userId, isManager) {
     .order('date_added', { ascending: false })
 
   if (!isManager) q = q.eq('assigned_to', userId)
+  if (entityFilter) q = q.eq('entity', entityFilter)
 
   const { data, error } = await q
   if (error) throw error
   return data ?? []
 }
 
-async function fetchReps() {
-  const { data, error } = await supabase
+async function fetchReps(entityFilter) {
+  let q = supabase
     .from('profiles')
-    .select('id, full_name')
-    .in('role', ['bd_rep', 'am', 'bd_tl'])
+    .select('id, full_name, entity')
+    .in('role', ['bd_rep', 'bd_am', 'bd_tl', 'ksa_clevel'])
     .order('full_name')
+  if (entityFilter) q = q.eq('entity', entityFilter)
+  const { data, error } = await q
   if (error) throw error
   return data ?? []
 }
 
-// ââ Sort helper âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ── Sort helper ───────────────────────────────────────────────
 function sortLeads(leads, key, dir) {
   if (!key) return leads
   return [...leads].sort((a, b) => {
@@ -80,32 +83,32 @@ function sortLeads(leads, key, dir) {
   })
 }
 
-// ââ Component âââââââââââââââââââââââââââââââââââââââââââââââââ
+// ── Component ─────────────────────────────────────────────────
 export default function Leads() {
-  const { userId, isManager }               = useAuth()
+  const { userId, isManager, entityFilter } = useAuth()
   const { t, lang, repFilter, setRepFilter } = useApp()
   const queryClient                         = useQueryClient()
 
-  const [search,        setSearch]        = useState('')
-  const [stageFilter,   setStageFilter]   = useState('')
-  const [sourceFilter,  setSourceFilter]  = useState('')
-  const [entityFilter,  setEntityFilter]  = useState('')
-  const [selectedLead,  setSelectedLead]  = useState(null)
-  const [sortKey,       setSortKey]       = useState('date_added')
-  const [sortDir,       setSortDir]       = useState('desc')
-  const [selected,      setSelected]      = useState(new Set())
-  const [bulkStage,     setBulkStage]     = useState('')
-  const [bulkSaving,    setBulkSaving]    = useState(false)
+  const [search,         setSearch]         = useState('')
+  const [stageFilter,    setStageFilter]    = useState('')
+  const [sourceFilter,   setSourceFilter]   = useState('')
+  const [entityUIFilter, setEntityUIFilter] = useState('')
+  const [selectedLead,   setSelectedLead]   = useState(null)
+  const [sortKey,        setSortKey]        = useState('date_added')
+  const [sortDir,        setSortDir]        = useState('desc')
+  const [selected,       setSelected]       = useState(new Set())
+  const [bulkStage,      setBulkStage]      = useState('')
+  const [bulkSaving,     setBulkSaving]     = useState(false)
 
   const { data: leads = [], isLoading } = useQuery({
-    queryKey: ['all-leads', userId, isManager],
-    queryFn:  () => fetchLeads(userId, isManager),
+    queryKey: ['all-leads', userId, isManager, entityFilter],
+    queryFn:  () => fetchLeads(userId, isManager, entityFilter),
     staleTime: 30_000,
   })
 
   const { data: reps = [] } = useQuery({
-    queryKey: ['pipeline-reps'],
-    queryFn:  fetchReps,
+    queryKey: ['pipeline-reps', entityFilter],
+    queryFn:  () => fetchReps(entityFilter),
     enabled:  isManager,
     staleTime: 120_000,
   })
@@ -121,12 +124,12 @@ export default function Leads() {
         l.phone?.includes(q)
       )
     }
-    if (stageFilter)  rows = rows.filter(l => l.stage === stageFilter)
-    if (sourceFilter) rows = rows.filter(l => l.lead_source === sourceFilter)
-    if (repFilter)    rows = rows.filter(l => l.assigned_to === repFilter)
-    if (entityFilter) rows = rows.filter(l => l.entity === entityFilter)
+    if (stageFilter)      rows = rows.filter(l => l.stage === stageFilter)
+    if (sourceFilter)     rows = rows.filter(l => l.lead_source === sourceFilter)
+    if (repFilter)        rows = rows.filter(l => l.assigned_to === repFilter)
+    if (entityUIFilter)   rows = rows.filter(l => l.entity === entityUIFilter)
     return sortLeads(rows, sortKey, sortDir)
-  }, [leads, search, stageFilter, sourceFilter, repFilter, entityFilter, sortKey, sortDir])
+  }, [leads, search, stageFilter, sourceFilter, repFilter, entityUIFilter, sortKey, sortDir])
 
   function toggleSort(key) {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -194,15 +197,17 @@ export default function Leads() {
         {SOURCES.map(s => <option key={s} value={s}>{t(`source.${s}`)}</option>)}
       </select>
 
-      {/* Entity filter */}
-      <select className="crm-input" style={{ fontSize: '12px', width: '90px' }}
-        value={entityFilter} onChange={e => setEntityFilter(e.target.value)}>
-        <option value="">All</option>
-        <option value="EG">Egypt</option>
-        <option value="KSA">KSA</option>
-      </select>
+      {/* Entity sub-filter (only shown in holding/global view) */}
+      {!entityFilter && (
+        <select className="crm-input" style={{ fontSize: '12px', width: '90px' }}
+          value={entityUIFilter} onChange={e => setEntityUIFilter(e.target.value)}>
+          <option value="">All</option>
+          <option value="EG">Egypt</option>
+          <option value="KSA">KSA</option>
+        </select>
+      )}
 
-      {/* Rep filter â managers only */}
+      {/* Rep filter — managers only */}
       {isManager && (
         <select className="crm-input" style={{ fontSize: '12px', width: '140px' }}
           value={repFilter} onChange={e => {
@@ -247,7 +252,7 @@ export default function Leads() {
               className="crm-input"
               style={{ fontSize: '11px', padding: '3px 7px', height: '26px' }}
             >
-              <option value="">Move to stageâ¦</option>
+              <option value="">Move to stage…</option>
               {ALL_STAGES.map(s => <option key={s} value={s}>{s.replace(/_/g,' ')}</option>)}
             </select>
             <button
@@ -255,7 +260,7 @@ export default function Leads() {
               disabled={!bulkStage || bulkSaving}
               className="btn btn-primary btn-xs"
             >
-              {bulkSaving ? 'Savingâ¦' : 'Apply'}
+              {bulkSaving ? 'Saving…' : 'Apply'}
             </button>
             <button onClick={() => setSelected(new Set())} className="btn btn-ghost btn-xs">
               <X size={11} /> Clear
@@ -331,7 +336,7 @@ export default function Leads() {
   )
 }
 
-// ââ Table sub-components ââââââââââââââââââââââââââââââââââââââ
+// ── Table sub-components ──────────────────────────────────────
 function Th({ children, onClick, align = 'left' }) {
   return (
     <th
@@ -399,13 +404,13 @@ function LeadRow({ lead, isManager, lang, t, onClick, isSelected, onSelect }) {
 
       {/* Source */}
       <td style={{ padding: '9px 12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-        {lead.lead_source && lead.lead_source !== 'unknown' ? t(`source.${lead.lead_source}`) : 'â'}
+        {lead.lead_source && lead.lead_source !== 'unknown' ? t(`source.${lead.lead_source}`) : '—'}
       </td>
 
       {/* Contact */}
       <td style={{ padding: '9px 12px', color: 'var(--text-secondary)', maxWidth: '160px' }}>
         <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {lead.contact_name ?? 'â'}
+          {lead.contact_name ?? '—'}
         </div>
         {lead.contact_title && (
           <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -427,12 +432,12 @@ function LeadRow({ lead, isManager, lang, t, onClick, isSelected, onSelect }) {
               </div>
             )}
           </div>
-        ) : 'â'}
+        ) : '—'}
       </td>
 
       {/* Probability */}
       <td style={{ padding: '9px 12px', textAlign: 'right', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-        {lead.deal_success_rate != null ? `${lead.deal_success_rate}%` : 'â'}
+        {lead.deal_success_rate != null ? `${lead.deal_success_rate}%` : '—'}
       </td>
 
       {/* Next action */}
@@ -445,17 +450,17 @@ function LeadRow({ lead, isManager, lang, t, onClick, isSelected, onSelect }) {
             </span>
             {lead.next_action && (
               <span style={{ color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                â {lead.next_action}
+                — {lead.next_action}
               </span>
             )}
           </div>
-        ) : 'â'}
+        ) : '—'}
       </td>
 
       {/* Rep */}
       {isManager && (
         <td style={{ padding: '9px 12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-          {lead.profiles?.full_name ?? 'â'}
+          {lead.profiles?.full_name ?? '—'}
         </td>
       )}
 
