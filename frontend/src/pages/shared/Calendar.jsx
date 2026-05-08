@@ -20,7 +20,7 @@ const MONTH_NAMES = ['January','February','March','April','May','June','July','A
 const DAY_NAMES   = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
 
 function toYMD(date) {
-  return date.getFullYear() + '-' + String(date.getMonth()+1).padStart(2,'0') + '-' + String(date.getDate()).padStart(2,'0')
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`
 }
 function isoToYMD(s) { return s?.slice(0,10) ?? '' }
 
@@ -38,7 +38,7 @@ async function fetchMonthLeads(userId, isManager, repFilter, startISO, endISO) {
 async function fetchMonthEvents(userId, isManager, startISO, endISO) {
   let q = supabase.from('calendar_events')
     .select('id, title, starts_at, ends_at, event_type, location, lead_id, leads(company_name)')
-    .gte('starts_at', startISO + 'T00:00:00').lte('starts_at', endISO + 'T23:59:59').order('starts_at')
+    .gte('starts_at', `${startISO}T00:00:00`).lte('starts_at', `${endISO}T23:59:59`).order('starts_at')
   if (!isManager) q = q.eq('created_by', userId)
   const { data, error } = await q
   if (error) throw error
@@ -116,8 +116,8 @@ export default function Calendar() {
       if (error) throw error
       queryClient.invalidateQueries({ queryKey:['calendar-events'] })
       queryClient.invalidateQueries({ queryKey:['google-integration'] })
-      toast('Calendar synced', 'success')
-    } catch(err) { toast('Sync failed: ' + err.message, 'error')
+      toast({ title:'Calendar synced', type:'success' })
+    } catch(err) { toast({ title:'Sync failed', description:err.message, type:'error' })
     } finally { setSyncing(false) }
   }
 
@@ -183,10 +183,10 @@ export default function Calendar() {
                   {items && (
                     <div style={{ display:'flex', flexDirection:'column', gap:'2px', flex:1, overflow:'hidden' }}>
                       {items.events.slice(0,2).map(ev => (
-                        <div key={ev.id} style={{ fontSize:'10px', fontWeight:600, lineHeight:1.2, padding:'1px 4px', borderRadius:'3px', background:(EVENT_TYPE_COLORS[ev.event_type]??'#64748b')+'22', color:EVENT_TYPE_COLORS[ev.event_type]??'#64748b', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{ev.title}</div>
+                        <div key={ev.id} style={{ fontSize:'10px', fontWeight:600, lineHeight:1.2, padding:'1px 4px', borderRadius:'3px', background:`${EVENT_TYPE_COLORS[ev.event_type]??'#64748b'}22`, color:EVENT_TYPE_COLORS[ev.event_type]??'#64748b', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{ev.title}</div>
                       ))}
                       {items.leads.slice(0,3).map(lead => (
-                        <div key={lead.id} style={{ fontSize:'10px', lineHeight:1.2, padding:'1px 4px', borderRadius:'3px', background:(STAGE_COLORS[lead.stage]??'#64748b')+'18', color:STAGE_COLORS[lead.stage]??'#64748b', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{lead.company_name}</div>
+                        <div key={lead.id} style={{ fontSize:'10px', lineHeight:1.2, padding:'1px 4px', borderRadius:'3px', background:`${STAGE_COLORS[lead.stage]??'#64748b'}18`, color:STAGE_COLORS[lead.stage]??'#64748b', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{lead.company_name}</div>
                       ))}
                       {(items.leads.length+items.events.length)>5 && <div style={{ fontSize:'10px', color:'var(--text-muted)', paddingLeft:'4px' }}>+{items.leads.length+items.events.length-5} more</div>}
                     </div>
@@ -221,14 +221,14 @@ export default function Calendar() {
                     const color   = EVENT_TYPE_COLORS[ev.event_type] ?? '#64748b'
                     const timeStr = new Date(ev.starts_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})
                     return (
-                      <div key={ev.id} style={{ padding:'9px 11px', borderRadius:'7px', marginBottom:'6px', background:'var(--bg-card)', border:'1px solid var(--border-default)', borderLeft:'3px solid ' + color }}>
+                      <div key={ev.id} style={{ padding:'9px 11px', borderRadius:'7px', marginBottom:'6px', background:'var(--bg-card)', border:'1px solid var(--border-default)', borderLeft:`3px solid ${color}` }}>
                         <div style={{ display:'flex', alignItems:'center', gap:'5px', marginBottom:'3px' }}>
                           <CalIcon size={11} color={color} />
                           <span style={{ fontSize:'12px', fontWeight:600, color:'var(--text-primary)' }}>{ev.title}</span>
                         </div>
                         <div style={{ display:'flex', alignItems:'center', gap:'4px', fontSize:'11px', color:'var(--text-muted)' }}>
                           <Clock size={10} />{timeStr}
-                          <span style={{ marginLeft:'4px', fontSize:'10px', fontWeight:600, padding:'1px 5px', borderRadius:'3px', background:color+'22', color }}>{EVENT_TYPE_LABELS[ev.event_type]??ev.event_type}</span>
+                          <span style={{ marginLeft:'4px', fontSize:'10px', fontWeight:600, padding:'1px 5px', borderRadius:'3px', background:`${color}22`, color }}>{EVENT_TYPE_LABELS[ev.event_type]??ev.event_type}</span>
                         </div>
                         {ev.leads?.company_name && <div style={{ fontSize:'11px', color:'var(--text-muted)', marginTop:'3px' }}>{ev.leads.company_name}</div>}
                         {ev.location && <div style={{ fontSize:'11px', color:'var(--text-muted)', marginTop:'2px' }}>{ev.location}</div>}
@@ -244,7 +244,7 @@ export default function Calendar() {
                     const color = STAGE_COLORS[lead.stage] ?? '#64748b'
                     return (
                       <div key={lead.id} onClick={()=>setLeadPanelId(lead.id)}
-                        style={{ padding:'9px 11px', borderRadius:'7px', marginBottom:'6px', background:'var(--bg-card)', border:'1px solid var(--border-default)', borderLeft:'3px solid ' + color, cursor:'pointer' }}
+                        style={{ padding:'9px 11px', borderRadius:'7px', marginBottom:'6px', background:'var(--bg-card)', border:'1px solid var(--border-default)', borderLeft:`3px solid ${color}`, cursor:'pointer' }}
                         onMouseEnter={e => e.currentTarget.style.background='var(--bg-hover)'}
                         onMouseLeave={e => e.currentTarget.style.background='var(--bg-card)'}>
                         <div style={{ fontSize:'12px', fontWeight:600, color:'var(--text-primary)', marginBottom:'2px' }}>{lead.company_name}</div>
@@ -252,7 +252,7 @@ export default function Calendar() {
                         <div style={{ display:'flex', gap:'8px' }}>
                           {lead.contact_name && <span style={{ fontSize:'10px', color:'var(--text-muted)' }}>{lead.contact_name}</span>}
                           {isManager && lead.profiles?.full_name && <span style={{ fontSize:'10px', color:'var(--text-muted)' }}>Rep: {lead.profiles.full_name}</span>}
-                          <span style={{ fontSize:'10px', fontWeight:600, padding:'0 4px', borderRadius:'3px', background:color+'22', color }}>{t('stage.' + lead.stage)}</span>
+                          <span style={{ fontSize:'10px', fontWeight:600, padding:'0 4px', borderRadius:'3px', background:`${color}22`, color }}>{t(`stage.${lead.stage}`)}</span>
                         </div>
                       </div>
                     )
