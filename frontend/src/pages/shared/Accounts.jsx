@@ -12,7 +12,7 @@ const CLIENT_STAGES = ['client_active', 'client_inactive', 'client_renewal']
 const STAGE_COLORS  = { client_active: '#22c55e', client_inactive: '#ef4444', client_renewal: '#f59e0b' }
 const CONTRACT_TYPES = ['yearly','quarterly','monthly','yearly_on_demand','per_item']
 
-async function fetchAccounts(userId, isManager) {
+async function fetchAccounts(userId, isManager, entityFilter) {
   let q = supabase.from('leads').select(`
     id, company_name, company_id, stage, entity, is_sna,
     contact_name, contact_title, phone, estimated_gmv_month,
@@ -23,6 +23,7 @@ async function fetchAccounts(userId, isManager) {
     )
   `).in('stage', CLIENT_STAGES).order('company_name', { ascending: true })
   if (!isManager) q = q.eq('assigned_to', userId)
+  if (entityFilter) q = q.eq('entity', entityFilter)
   const { data, error } = await q
   if (error) throw error
   return (data ?? []).map(row => ({
@@ -35,28 +36,29 @@ async function fetchAccounts(userId, isManager) {
   }))
 }
 
-async function fetchReps() {
-  const { data, error } = await supabase.from('profiles').select('id, full_name').in('role', ['bd_rep','bd_am','bd_tl']).order('full_name')
+async function fetchReps(entityFilter) {
+  let q = supabase.from('profiles').select('id, full_name, entity').in('role', ['bd_rep','bd_am','bd_tl','ksa_clevel']).order('full_name')
+  if (entityFilter) q = q.eq('entity', entityFilter)
+  const { data, error } = await q
   if (error) throw error
   return data ?? []
 }
 
 export default function Accounts() {
-  const { userId, isManager }               = useAuth()
+  const { userId, isManager, entityFilter } = useAuth()
   const { t, lang, repFilter, setRepFilter } = useApp()
   const [search,         setSearch]         = useState('')
   const [stageFilter,    setStageFilter]    = useState('')
   const [contractFilter, setContractFilter] = useState('')
-  const [entityFilter,   setEntityFilter]   = useState('')
   const [selectedLead,   setSelectedLead]   = useState(null)
 
   const { data: accounts = [], isLoading } = useQuery({
-    queryKey: ['accounts', userId, isManager],
-    queryFn:  () => fetchAccounts(userId, isManager),
+    queryKey: ['accounts', userId, isManager, entityFilter],
+    queryFn:  () => fetchAccounts(userId, isManager, entityFilter),
     staleTime: 30_000,
   })
   const { data: reps = [] } = useQuery({
-    queryKey: ['pipeline-reps'], queryFn: fetchReps,
+    queryKey: ['pipeline-reps', entityFilter], queryFn: () => fetchReps(entityFilter),
     enabled: isManager, staleTime: 120_000,
   })
 
@@ -74,10 +76,9 @@ export default function Accounts() {
     if (search)         rows = rows.filter(a => a.company_name.toLowerCase().includes(search.toLowerCase()))
     if (stageFilter)    rows = rows.filter(a => a.stage === stageFilter)
     if (contractFilter) rows = rows.filter(a => a.contract_type === contractFilter)
-    if (repFilter)      rows = rows.filter(a => a.assigned_to === repFilter)
-    if (entityFilter)   rows = rows.filter(a => a.entity === entityFilter)
+    if (repFilter)    rows = rows.filter(a => a.assigned_to === repFilter)
     return rows
-  }, [accounts, search, stageFilter, contractFilter, repFilter, entityFilter])
+  }, [accounts, search, stageFilter, contractFilter, repFilter])
 
   const actions = (
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -92,9 +93,6 @@ export default function Accounts() {
       <select className="crm-input" style={{ fontSize: '12px', width: '130px' }} value={contractFilter} onChange={e => setContractFilter(e.target.value)}>
         <option value="">All contracts</option>
         {CONTRACT_TYPES.map(c => <option key={c} value={c}>{t(`contract.${c}`)}</option>)}
-      </select>
-      <select className="crm-input" style={{ fontSize: '12px', width: '90px' }} value={entityFilter} onChange={e => setEntityFilter(e.target.value)}>
-        <option value="">All</option><option value="EG">Egypt</option><option value="KSA">KSA</option>
       </select>
       {isManager && (
         <select className="crm-input" style={{ fontSize: '12px', width: '140px' }} value={repFilter}
