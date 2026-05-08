@@ -67,18 +67,36 @@ export function AuthProvider({ children }) {
   const isTL        = role === 'bd_tl'
   const isBDRep     = role === 'bd_rep'
   const isAM        = role === 'bd_am'
-  const isExecutive = isCCO || isCEO || isCOO
-  const isManager   = isCCO || isTL
-  const canImport   = isCCO || isTL || isCEO || isCOO || profile?.can_import === true
+  const isKSAClevel = role === 'ksa_clevel'
+  const isModerator = role === 'moderator'
+  const isExecutive = isCCO || isCEO || isCOO || isKSAClevel
+  const isManager   = isCCO || isTL || isKSAClevel
+  const canImport   = isCCO || isTL || isCEO || isCOO || isKSAClevel || profile?.can_import === true
   const isBDMode    = isExecutive && viewMode === 'bd-working'
+
+  // entityFilter: what entity to scope DB queries to.
+  // null = no filter (all entities visible — holding mode or non-entity roles)
+  // 'EG' | 'KSA' = filter to that entity
+  const entityFilter = (() => {
+    if (!profile) return null
+    // CCO/CEO/COO: controlled by the entityView toggle
+    if (isCCO || isCEO || isCOO) return entityView === 'holding' ? null : entityView
+    // ksa_clevel: can see KSA or all (holding); never scoped to EG
+    if (isKSAClevel) {
+      const ev = entityView === 'EG' ? 'KSA' : entityView
+      return ev === 'holding' ? null : ev
+    }
+    // All other roles: fixed to their own entity (bd_rep, bd_tl, bd_am, moderator)
+    return profile.entity || 'EG'
+  })()
 
   return (
     <AuthContext.Provider value={{
       session, profile, loading,
       signIn, signOut, resetPassword,
-      role, isAdmin, isCCO, isCEO, isCOO, isTL, isBDRep, isAM,
+      role, isAdmin, isCCO, isCEO, isCOO, isTL, isBDRep, isAM, isKSAClevel, isModerator,
       isExecutive, isManager, canImport, isBDMode,
-      viewMode, entityView, setViewMode, setEntityView,
+      viewMode, entityView, setViewMode, setEntityView, entityFilter,
       userId: session?.user?.id ?? null,
     }}>
       {children}
