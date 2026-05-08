@@ -5,12 +5,14 @@ import { useNavigate } from 'react-router-dom'
 import TopBar    from '@/components/layout/TopBar'
 import LeadPanel from '@/components/pipeline/LeadPanel'
 import { useApp }  from '@/contexts/AppContext'
+import { useAuth }  from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { formatEGP, formatDate } from '@/lib/i18n'
 
-function useCCOStats(repFilter) {
+// -- Data fetching
+function useCCOStats(repFilter, entityFilter) {
   return useQuery({
-    queryKey: ['cco-stats', repFilter],
+    queryKey: ['cco-stats', repFilter, entityFilter],
     queryFn: async () => {
       let leadsQ      = supabase.from('leads').select('id', { count: 'exact', head: true })
       let stageQ      = supabase.from('leads').select('stage, estimated_gmv_month, deal_success_rate')
@@ -29,6 +31,12 @@ function useCCOStats(repFilter) {
         upcomingQ = upcomingQ.eq('assigned_to', repFilter)
       }
 
+      if (entityFilter) {
+        leadsQ    = leadsQ.eq('entity', entityFilter)
+        stageQ    = stageQ.eq('entity', entityFilter)
+        upcomingQ = upcomingQ.eq('entity', entityFilter)
+      }
+
       const [
         { count: totalLeads },
         { data: pipelineSummary },
@@ -45,19 +53,30 @@ function useCCOStats(repFilter) {
         supabase.from('leads').select('id', { count: 'exact', head: true }).eq('is_sna', true),
         supabase.from('handoffs').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
         upcomingQ,
-        supabase.from('leads').select('id', { count: 'exact', head: true }).is('assigned_to', null),
-        supabase.from('leads')
-          .select('id, company_name, stage, contact_name, phone, lead_source, area_city, created_at')
-          .is('assigned_to', null)
-          .order('created_at', { ascending: false })
-          .limit(50),
-        supabase.from('profiles')
-          .select('id, full_name, role')
-          .in('role', ['bd_rep', 'bd_tl', 'bd_am'])
-          .order('full_name'),
+        entityFilter
+          ? supabase.from('leads').select('id', { count: 'exact', head: true }).is('assigned_to', null).eq('entity', entityFilter)
+          : supabase.from('leads').select('id', { count: 'exact', head: true }).is('assigned_to', null),
+        (() => {
+          let q = supabase.from('leads')
+            .select('id, company_name, stage, contact_name, phone, lead_source, area_city, created_at')
+            .is('assigned_to', null)
+            .order('created_at', { ascending: false })
+            .limit(50)
+          if (entityFilter) q = q.eq('entity', entityFilter)
+          return q
+        })(),
+        (() => {
+          let q = supabase.from('profiles')
+            .select('id, full_name, role, entity')
+            .in('role', ['bd_rep', 'bd_tl', 'bd_am', 'ksa_clevel'])
+            .order('full_name')
+          if (entityFilter) q = q.eq('entity', entityFilter)
+          return q
+        })(),
         stageQ,
       ])
 
+      // Build rep grid: all profiles merged with pipeline summary (so AMs appear even with 0 pipeline)
       const summaryMap = {}
       ;(pipelineSummary ?? []).forEach(r => { summaryMap[r.rep_id] = r })
       const allRepsGrid = (repsData ?? []).map(p => summaryMap[p.id] ?? {
@@ -66,14 +85,16 @@ function useCCOStats(repFilter) {
         total_weighted_gmv_month: 0, total_contracted_gmv_month: 0, total_realized_gmv: 0,
       })
 
+      // Filter rep grid if a specific rep is selected
       const repsFiltered = repFilter
         ? allRepsGrid.filter(r => r.rep_id === repFilter)
         : allRepsGrid
 
-      const totalWeightedGMV   = repsFiltered.reduce((s, r) => s + (r.total_weighted_gmv_month   ?? 0), 0)
+      const totalWeightedGMV    = repsFiltered.reduce((s, r) => s + (r.total_weighted_gmv_month   ?? 0), 0)
       const totalContractedGMV = repsFiltered.reduce((s, r) => s + (r.total_contracted_gmv_month ?? 0), 0)
       const totalRealizedGMV   = repsFiltered.reduce((s, r) => s + (r.total_realized_gmv         ?? 0), 0)
 
+      // Aggregate stage breakdown
       const STAGE_ORDER = ['new_lead','reaching_out','no_response','meeting_done','negotiation','reconnect']
       const stageMap = {}
       ;(stageLeads ?? []).forEach(l => {
@@ -106,6 +127,7 @@ function useCCOStats(repFilter) {
   })
 }
 
+// -- KPI Card
 function KpiCard({ label, value, sub, accent, icon: Icon, alert }) {
   return (
     <div className="kpi-card" style={{
@@ -132,6 +154,7 @@ function KpiCard({ label, value, sub, accent, icon: Icon, alert }) {
   )
 }
 
+// -- Stage breakdown row
 const STAGE_LABELS = {
   new_lead: 'New Lead', reaching_out: 'Reaching Out', no_response: 'No Response',
   meeting_done: 'Meeting Done', negotiation: 'Negotiation', reconnect: 'Reconnect',
@@ -164,6 +187,7 @@ function StageBreakdown({ stages }) {
   )
 }
 
+// -- Rep row (clickable → sets global rep filter)
 function RepRow({ rep, onSelect, isSelected }) {
   return (
     <div
@@ -196,6 +220,7 @@ function RepRow({ rep, onSelect, isSelected }) {
   )
 }
 
+// -- Action row
 function ActionRow({ lead, lang }) {
   const today = new Date().toISOString().slice(0, 10)
   const isOverdue = lead.next_action_date && lead.next_action_date < today
@@ -225,6 +250,7 @@ function ActionRow({ lead, lang }) {
   )
 }
 
+// -- Pool lead row with assign dropdown + clickable name
 function PoolRow({ lead, reps, onAssign, onOpenLead }) {
   const [assigning, setAssigning] = useState(false)
 
@@ -291,11 +317,13 @@ function PoolRow({ lead, reps, onAssign, onOpenLead }) {
   )
 }
 
+// -- Main CCO dashboard
 export default function CCODashboard() {
   const { t, lang, toast, repFilter, repFilterName, setRepFilter } = useApp()
+  const { entityFilter } = useAuth()
   const navigate            = useNavigate()
   const queryClient         = useQueryClient()
-  const { data, isLoading, error } = useCCOStats(repFilter)
+  const { data, isLoading, error } = useCCOStats(repFilter, entityFilter)
   const [selectedLeadId, setSelectedLeadId] = useState(null)
 
   const handleAssign = async (leadId, repId) => {
@@ -429,7 +457,7 @@ export default function CCODashboard() {
             <div style={{
               display: 'grid',
               gridTemplateColumns: '140px 60px 60px 90px 90px 90px',
-              gap: '8px', padding: '7px 14px',
+              gap: '8px', padding: '7px14px',
               background: 'var(--bg-hover)',
               borderBottom: '1px solid var(--border-default)',
               fontSize: '10px', fontWeight: 700, textTransform: 'uppercase',
@@ -445,7 +473,8 @@ export default function CCODashboard() {
             ) : (
               data.reps.map((rep, i) => (
                 <RepRow
-                  key={i} rep={rep}
+                  key={i}
+                  rep={rep}
                   onSelect={handleRepSelect}
                   isSelected={repFilter === rep.rep_id}
                 />
@@ -474,50 +503,49 @@ export default function CCODashboard() {
 
         </div>
 
-        {!repFilter && (
-          <div className="crm-card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div style={{
-              padding: '12px 16px', borderBottom: '1px solid var(--border-default)',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Inbox size={14} color="var(--brand-cyan)" />
-                <span style={{ fontSize: '13px', fontWeight: 600 }}>Pool</span>
-                <span style={{
-                  fontSize: '11px', padding: '2px 8px', borderRadius: '10px',
-                  background: 'rgba(34,211,238,0.1)', color: 'var(--brand-cyan)', fontWeight: 600,
-                }}>
-                  {data.poolCount} unassigned
-                </span>
-              </div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                Click name to view · dropdown to assign
-              </div>
+        {!repFilter && <div className="crm-card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div style={{
+            padding: '12px 16px', borderBottom: '1px solid var(--border-default)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Inbox size={14} color="var(--brand-cyan)" />
+              <span style={{ fontSize: '13px', fontWeight: 600 }}>Pool</span>
+              <span style={{
+                fontSize: '11px', padding: '2px 8px', borderRadius: '10px',
+                background: 'rgba(34,211,238,0.1)', color: 'var(--brand-cyan)', fontWeight: 600,
+              }}>
+                {data.poolCount} unassigned
+              </span>
             </div>
-
-            {data.poolLeads.length === 0 ? (
-              <div style={{ padding: '24px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>
-                Pool is empty
-              </div>
-            ) : (
-              <>
-                {data.poolLeads.map(lead => (
-                  <PoolRow
-                    key={lead.id} lead={lead}
-                    reps={data.repsList}
-                    onAssign={handleAssign}
-                    onOpenLead={setSelectedLeadId}
-                  />
-                ))}
-                {data.poolCount > 50 && (
-                  <div style={{ padding: '10px 16px', fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', borderTop: '1px solid var(--border-default)' }}>
-                    Showing 50 of {data.poolCount} pool leads
-                  </div>
-                )}
-              </>
-            )}
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+              Click name to view · dropdown to assign
+            </div>
           </div>
-        )}
+
+          {data.poolLeads.length === 0 ? (
+            <div style={{ padding: '24px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>
+              Pool is empty
+            </div>
+          ) : (
+            <>
+              {data.poolLeads.map(lead => (
+                <PoolRow
+                  key={lead.id}
+                  lead={lead}
+                  reps={data.repsList}
+                  onAssign={handleAssign}
+                  onOpenLead={setSelectedLeadId}
+                />
+              ))}
+              {data.poolCount > 50 && (
+                <div style={{ padding: '10px 16px', fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', borderTop: '1px solid var(--border-default)' }}>
+                  Showing 50 of {data.poolCount} pool leads
+                </div>
+              )}
+            </>
+          )}
+        </div>}
 
       </div>
 
