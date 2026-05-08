@@ -9,7 +9,6 @@ import { useAuth }   from '@/contexts/AuthContext'
 import { useApp }    from '@/contexts/AppContext'
 import { supabase }  from '@/lib/supabase'
 
-// Nav definitions per role group
 const NAV_EXEC = [
   { key: 'nav.dashboard', icon: LayoutDashboard, href: '/dashboard/executive' },
   { key: 'nav.pipeline',  icon: TrendingUp,      href: '/pipeline' },
@@ -52,32 +51,31 @@ const NAV_AM = [
 
 export default function Sidebar({ onShowTour }) {
   const {
-    role, isAdmin, isExecutive, isCCO, isCEO, isCOO, isTL, isBDRep, isAM,
-    canImport, isBDMode, viewMode, entityView, setViewMode, setEntityView,
+    role, isAdmin, isExecutive, isCCO, isCEO, isCOO, isTL, isBDRep, isAM, isKSAClevel, isModerator,
+    canImport, isBDMode, viewMode, entityView, setViewMode, setEntityView, entityFilter,
     signOut, profile,
   } = useAuth()
   const { t, lang, setLang, theme, setTheme, repFilter, repFilterName, setRepFilter } = useApp()
 
-  // Reps list for the rep selector (managers + executives only)
-  const isManager = isCCO || isTL || isCEO || isCOO
+  const isManager = isCCO || isTL || isCEO || isCOO || isKSAClevel
   const [repsList, setRepsList] = useState([])
   useEffect(() => {
     if (!isManager && !isExecutive) return
-    supabase
+    let q = supabase
       .from('profiles')
-      .select('id, full_name')
-      .in('role', ['bd_rep', 'bd_tl', 'am'])
+      .select('id, full_name, entity')
+      .in('role', ['bd_rep', 'bd_tl', 'bd_am', 'ksa_clevel'])
       .order('full_name')
-      .then(({ data }) => setRepsList(data ?? []))
-  }, [isManager, isExecutive])
+    if (entityFilter) q = q.eq('entity', entityFilter)
+    q.then(({ data }) => setRepsList(data ?? []))
+  }, [isManager, isExecutive, entityFilter])
 
-  // Pick nav list
   let navItems
   if (isBDMode) {
     navItems = NAV_BD
   } else if (isCEO || isCOO) {
     navItems = NAV_EXEC
-  } else if (isCCO || isTL) {
+  } else if (isCCO || isTL || isKSAClevel) {
     navItems = NAV_MANAGER
   } else if (isAM) {
     navItems = NAV_AM
@@ -93,7 +91,6 @@ export default function Sidebar({ onShowTour }) {
 
   return (
     <aside className="sidebar">
-      {/* Logo + user */}
       <div className="px-4 py-4 border-b b1">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded bg-brand-green flex items-center justify-center">
@@ -118,12 +115,11 @@ export default function Sidebar({ onShowTour }) {
         </div>
       </div>
 
-      {/* Executive entity toggle */}
       {isExecutive && !isBDMode && (
         <div className="px-3 pt-3 pb-1 border-b b1">
           <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '.06em' }}>View</div>
           <div style={{ display: 'flex', gap: '4px' }}>
-            {['EG','KSA','holding'].map(e => (
+            {(isKSAClevel ? ['KSA','holding'] : ['EG','KSA','holding']).map(e => (
               <button
                 key={e}
                 onClick={() => setEntityView(e)}
@@ -143,7 +139,6 @@ export default function Sidebar({ onShowTour }) {
         </div>
       )}
 
-      {/* BD Working mode toggle for executives */}
       {isExecutive && (
         <div className="px-3 py-2 border-b b1">
           <button
@@ -163,7 +158,6 @@ export default function Sidebar({ onShowTour }) {
         </div>
       )}
 
-      {/* Rep filter selector */}
       {showRepSelector && (repsList.length > 0 || repFilter) && (
         <div className="px-3 py-2 border-b b1">
           <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '.06em' }}>
@@ -206,7 +200,6 @@ export default function Sidebar({ onShowTour }) {
         </div>
       )}
 
-      {/* Nav items */}
       <nav className="flex-1 py-2">
         {navItems
           .filter(item => !(item.importOnly && !canImport))
@@ -222,7 +215,6 @@ export default function Sidebar({ onShowTour }) {
             </NavLink>
           ))}
 
-        {/* Admin link */}
         {isAdmin && (
           <NavLink
             to="/admin"
@@ -234,7 +226,6 @@ export default function Sidebar({ onShowTour }) {
         )}
       </nav>
 
-      {/* Ask AI */}
       <div className="px-3 py-2 border-t b1">
         <NavLink to="/ask-ai" className="btn btn-ai btn-md w-full">
           <Sparkles size={14} />
@@ -242,7 +233,6 @@ export default function Sidebar({ onShowTour }) {
         </NavLink>
       </div>
 
-      {/* Help / tour trigger */}
       <div className="px-3 py-2 border-t b1">
         <button
           onClick={onShowTour}
@@ -253,7 +243,6 @@ export default function Sidebar({ onShowTour }) {
         </button>
       </div>
 
-      {/* Bottom controls */}
       <div className="px-3 py-3 border-t b1 flex items-center gap-2">
         <button
           onClick={() => setLang(lang === 'en' ? 'ar' : 'en')}
