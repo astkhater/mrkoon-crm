@@ -131,7 +131,7 @@ export default function LeadPanel({ leadId, onClose }) {
   const { userId }         = useAuth()
   const queryClient        = useQueryClient()
 
-  const [showSt!geMenu,  setShowStageMenu]  = useState(false)
+  const [showStageMenu,  setShowStageMenu]  = useState(false)
   const [actType,        setActType]        = useState('note')
   const [actBody,        setActBody]        = useState('')
   const [actContact,     setActContact]     = useState('')
@@ -427,4 +427,99 @@ export default function LeadPanel({ leadId, onClose }) {
                           onKeyDown={e => { if (e.key === 'Enter') saveDealValue(); if (e.key === 'Escape') setEditDealValue(false) }}
                         />
                         <button onClick={saveDealValue} className="btn btn-primary btn-xs">Save</button>
-                        <button onClick={() => setEditDealValue(false)} className="btn btn-ghost btn-xs">Ca
+                        <button onClick={() => setEditDealValue(false)} className="btn btn-ghost btn-xs">Cancel</button>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '17px', fontWeight: 700, color: lead.deal_value ? '#a78bfa' : 'var(--text-muted)' }}>
+                        {lead.deal_value ? formatEGP(lead.deal_value) : '—'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes */}
+              {lead.notes && (
+                <div className="crm-card" style={{ marginBottom: '16px', padding: '12px 14px' }}>
+                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
+                    Notes
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                    {lead.notes}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Log Activity form ─────────────────────── */}
+              <div className="crm-card" style={{ marginBottom: '16px', padding: '14px' }}>
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
+                  Log Activity
+                </div>
+                <form onSubmit={handleLogActivity}>
+                  {/* Type tabs */}
+                  <div style={{ display: 'flex', gap: '5px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                    {ACTIVITY_TYPES.map(({ key }) => (
+                      <button key={key} type="button"
+                        onClick={() => setActType(key)}
+                        className={'btn btn-xs ' + (actType === key ? 'btn-primary' : 'btn-secondary')}
+                      >
+                        {ACTIVITY_TYPE_LABELS[key]}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Contact row */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                    <input
+                      className="crm-input"
+                      style={{ height: '32px', fontSize: '12px' }}
+                      placeholder="Contact name (optional)"
+                      value={actContact}
+                      onChange={e => setActContact(e.target.value)}
+                    />
+                    <input
+                      className="crm-input"
+                      style={{ height: '32px', fontSize: '12px' }}
+                      placeholder="Title (optional)"
+                      value={actTitle}
+                      onChange={e => setActTitle(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Body */}
+                  <textarea
+                    className="crm-input"
+                    placeholder={actType.replace('_', ' ') + ' notes...'}
+                    value={actBody}
+                    onChange={e => setActBody(e.target.value)}
+                    rows={3}
+                    required
+                    style={{ height: 'auto', resize: 'vertical', marginBottom: '8px', padding: '8px 12px', lineHeight: 1.5 }}
+                  />
+
+                  <button type="submit" className="btn btn-primary btn-sm" disabled={saving || !actBody.trim()}>
+                    {saving ? 'Saving...' : 'Save'}
+                  </button>
+                </form>
+              </div>
+
+              {/* ── Activity log ─────────────────────────── */}
+              <div>
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
+                  Activity Log ({activities.length})
+                </div>
+                {activities.length === 0 ? (
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center', padding: '20px 0' }}>
+                    No activities yet
+                  </div>
+                ) : (
+                  activities.map(a => <ActivityItem key={a.id} activity={a} lang={lang} />)
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </>
+  )
+}
