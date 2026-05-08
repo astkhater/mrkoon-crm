@@ -1,5 +1,5 @@
 /**
- * Pipeline â kanban board
+ * Pipeline — kanban board
  * 8 active columns + collapsible graveyard (lost, unqualified)
  * CCO/TL: see all reps + filter dropdown
  * BD Rep: own leads only
@@ -16,7 +16,7 @@ import LeadCard         from '@/components/pipeline/LeadCard'
 import LeadPanel        from '@/components/pipeline/LeadPanel'
 import AddLeadModal     from '@/components/pipeline/AddLeadModal'
 
-// ââ Stage config ââââââââââââââââââââââââââââââââââââââââââââââ
+// ── Stage config ──────────────────────────────────────────────
 const ACTIVE_STAGES = [
   { key: 'new_lead',        color: '#64748b' },
   { key: 'reaching_out',    color: '#3b82f6' },
@@ -33,16 +33,16 @@ const GRAVEYARD_STAGES = [
   { key: 'unqualified', color: '#475569' },
 ]
 
-// ââ Data fetching âââââââââââââââââââââââââââââââââââââââââââââ
-async function fetchPipelineLeads(userId, isManager, repFilter) {
+// ── Data fetching ─────────────────────────────────────────────
+async function fetchPipelineLeads(userId, isManager, repFilter, entityFilter) {
   let q = supabase
     .from('leads')
     .select(`
       id, company_name, company_id, stage, entity,
       lead_source, is_sna,
       estimated_gmv_month, deal_success_rate,
-      next_action, next_action_date, date_added,
-      assigned_to,
+      next_action, next_action_date,
+      assigned_to, date_added,
       profiles:assigned_to ( full_name )
     `)
     .not('stage', 'in', '(client_active,client_inactive,client_renewal)')
@@ -54,25 +54,29 @@ async function fetchPipelineLeads(userId, isManager, repFilter) {
     q = q.eq('assigned_to', repFilter)
   }
 
+  if (entityFilter) q = q.eq('entity', entityFilter)
+
   const { data, error } = await q
   if (error) throw error
   return data ?? []
 }
 
-async function fetchReps() {
-  const { data, error } = await supabase
+async function fetchReps(entityFilter) {
+  let q = supabase
     .from('profiles')
-    .select('id, full_name')
-    .in('role', ['bd_rep', 'bd_am', 'bd_tl'])
+    .select('id, full_name, entity')
+    .in('role', ['bd_rep', 'bd_am', 'bd_tl', 'ksa_clevel'])
     .order('full_name')
+  if (entityFilter) q = q.eq('entity', entityFilter)
+  const { data, error } = await q
   if (error) throw error
   return data ?? []
 }
 
-// ââ Component âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ── Component ─────────────────────────────────────────────────
 export default function Pipeline() {
-  const { userId, isManager } = useAuth()
-  const { t, repFilter, setRepFilter }    = useApp()
+  const { userId, isManager, entityFilter } = useAuth()
+  const { t, repFilter, setRepFilter }      = useApp()
 
   const [selectedLead,  setSelectedLead]  = useState(null)
   const [showAddModal,  setShowAddModal]  = useState(false)
@@ -80,15 +84,15 @@ export default function Pipeline() {
 
   // Leads query
   const { data: leads = [], isLoading } = useQuery({
-    queryKey: ['pipeline-leads', userId, isManager, repFilter],
-    queryFn:  () => fetchPipelineLeads(userId, isManager, repFilter),
+    queryKey: ['pipeline-leads', userId, isManager, repFilter, entityFilter],
+    queryFn:  () => fetchPipelineLeads(userId, isManager, repFilter, entityFilter),
     staleTime: 30_000,
   })
 
   // Reps query (managers only)
   const { data: reps = [] } = useQuery({
-    queryKey: ['pipeline-reps'],
-    queryFn:  fetchReps,
+    queryKey: ['pipeline-reps', entityFilter],
+    queryFn:  () => fetchReps(entityFilter),
     enabled:  isManager,
     staleTime: 120_000,
   })
@@ -147,7 +151,7 @@ export default function Pipeline() {
       ) : (
         <div style={{ flex: 1, overflowX: 'auto', overflowY: 'hidden', padding: '0 16px 16px' }}>
 
-          {/* ââ Active columns ââ */}
+          {/* ── Active columns ── */}
           <div style={{
             display: 'flex', gap: '10px',
             minWidth: `${ACTIVE_STAGES.length * 220}px`,
@@ -166,7 +170,7 @@ export default function Pipeline() {
             ))}
           </div>
 
-          {/* ââ Graveyard ââ */}
+          {/* ── Graveyard ── */}
           <div style={{ marginTop: '14px' }}>
             <button
               className="btn btn-ghost btn-sm"
@@ -225,7 +229,7 @@ export default function Pipeline() {
   )
 }
 
-// ââ Kanban column âââââââââââââââââââââââââââââââââââââââââââââ
+// ── Kanban column ─────────────────────────────────────────────
 function KanbanColumn({ stageKey, color, leads, label, onCardClick }) {
   const totalGMV = leads.reduce((sum, l) => sum + (l.estimated_gmv_month ?? 0), 0)
 
@@ -281,9 +285,9 @@ function KanbanColumn({ stageKey, color, leads, label, onCardClick }) {
         {leads.length === 0 ? (
           <div style={{
             textAlign: 'center', padding: '20px 0',
-            fontSize: '11px', color: 'var(Empty-text-muted)',
+            fontSize: '11px', color: 'var(--text-muted)',
           }}>
-            â
+            Empty
           </div>
         ) : (
           leads.map(lead => (
