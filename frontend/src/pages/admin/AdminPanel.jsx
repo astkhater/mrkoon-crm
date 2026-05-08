@@ -280,8 +280,7 @@ export default function AdminPanel() {
                   color: 'var(--text-primary)',
                 }}
               >
-                <div style={{ fontWeight
-700, fontSize:'13px', marginBottom:'4px' }}>{ROLE_LABELS[r]}</div>
+                <div style={{ fontWeight:700, fontSize:'13px', marginBottom:'4px' }}>{ROLE_LABELS[r]}</div>
                 <div style={{ fontSize:'11px', color:'var(--text-muted)' }}>{r}</div>
               </button>
             ))}
@@ -308,8 +307,9 @@ export default function AdminPanel() {
                 <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'6px' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
                     <div>
-                      <div style={{ fontWeight:700, color:'var(--text-primary
-                        SheetsLastRun
+                      <div style={{ fontWeight:700, color:'var(--text-primary)', fontSize:'13px' }}>BD Leads Sheet Sync</div>
+                      <div style={{ fontSize:'11px', color:'var(--text-muted)', marginTop:'1px' }}>
+                        {sheetsLastRun
                           ? 'Last synced: ' + new Date(sheetsLastRun).toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })
                           : 'Never synced'}
                       </div>
@@ -321,7 +321,7 @@ export default function AdminPanel() {
                     style={{
                       width:'36px', height:'22px', borderRadius:'11px', border:'none', cursor:'pointer',
                       background: sheetsEnabled ? 'var(--brand-green)' : 'var(--border)',
-                      position:/relative', transition:'background .2s', flexShrink:0,
+                      position:'relative', transition:'background .2s', flexShrink:0,
                     }}
                   >
                     <span style={{
@@ -350,12 +350,13 @@ export default function AdminPanel() {
 
               {/* Google Calendar */}
               <div className="crm-card" style={{ padding:'18px 20px' }}>
-                <div style={{ display:'flex', alignItems:'center', justifyContent: 'space-between', marginBottom:'6px' }}>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'6px' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
                     <div>
-                      <div style={{ fontWeight:700, color:'var(--text-primary
-                        gcStatus
-                          ? 'Connected â‚" ' + (gcStatus.last_synced_at ? new Date(gcStatus.last_synced_at).toLocaleDateString() : 'not synced')
+                      <div style={{ fontWeight:700, color:'var(--text-primary)', fontSize:'13px' }}>Google Calendar</div>
+                      <div style={{ fontSize:'11px', color:'var(--text-muted)', marginTop:'1px' }}>
+                        {gcStatus
+                          ? 'Connected â€¢ ' + (gcStatus.last_synced_at ? new Date(gcStatus.last_synced_at).toLocaleDateString() : 'not synced')
                           : 'Not connected'}
                       </div>
                     </div>
@@ -366,7 +367,7 @@ export default function AdminPanel() {
                     style={{
                       width:'36px', height:'22px', borderRadius:'11px', border:'none', cursor:'pointer',
                       background: calEnabled ? 'var(--brand-green)' : 'var(--border)',
-                      position:/relative', transition:'background .2s', flexShrink:0,
+                      position:'relative', transition:'background .2s', flexShrink:0,
                     }}
                   >
                     <span style={{
@@ -393,10 +394,6 @@ export default function AdminPanel() {
 
           {/* Planned/dormant connectors */}
           <div>
-            <div style={{ fontSize:'11px', fontWeight:700, color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:'12px' }}>
-              Available Connectors
-            </div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr       <div>
             <div style={{ fontSize:'11px', fontWeight:700, color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:'12px' }}>
               Available Connectors
             </div>
