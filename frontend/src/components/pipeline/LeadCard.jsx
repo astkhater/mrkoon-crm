@@ -52,6 +52,7 @@ export default function LeadCard({ lead, onClick }) {
         e.currentTarget.style.boxShadow   = 'none'
       }}
     >
+      {/* SNA badge */}
       {lead.is_sna && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: '4px',
@@ -63,6 +64,7 @@ export default function LeadCard({ lead, onClick }) {
         </div>
       )}
 
+      {/* Company name */}
       <div style={{
         fontWeight: 600, fontSize: '12px', color: 'var(--text-primary)',
         marginBottom: '3px', lineHeight: 1.3,
@@ -70,12 +72,14 @@ export default function LeadCard({ lead, onClick }) {
         {lead.company_name}
       </div>
 
+      {/* Rep name — CCO / TL only */}
       {isManager && lead.profiles?.full_name && (
         <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>
           {lead.profiles.full_name}
         </div>
       )}
 
+      {/* GMV × probability = weighted */}
       {lead.estimated_gmv_month && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '5px', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '12px', color: 'var(--brand-green)', fontWeight: 700 }}>
@@ -84,7 +88,7 @@ export default function LeadCard({ lead, onClick }) {
           {lead.deal_success_rate != null && (
             <>
               <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                x{lead.deal_success_rate}%
+                ×{lead.deal_success_rate}%
               </span>
               {weightedGMV && (
                 <span style={{ fontSize: '11px', color: 'var(--brand-cyan)' }}>
@@ -96,6 +100,7 @@ export default function LeadCard({ lead, onClick }) {
         </div>
       )}
 
+      {/* Source badge */}
       {lead.lead_source && lead.lead_source !== 'unknown' && (
         <div style={{ marginBottom: '5px' }}>
           <span style={{
@@ -108,6 +113,7 @@ export default function LeadCard({ lead, onClick }) {
         </div>
       )}
 
+      {/* Next action date */}
       {lead.next_action_date && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: '4px',
@@ -127,6 +133,7 @@ export default function LeadCard({ lead, onClick }) {
         </div>
       )}
 
+      {/* Date added + days in stage */}
       {daysSinceAdded !== null && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: '4px',
