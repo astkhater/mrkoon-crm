@@ -67,6 +67,7 @@ export default function AdminPanel() {
     const map = {}
     ;(data ?? []).forEach(r => { map[r.key] = r.value })
     setSysSettings(map)
+    // Google Calendar integration status
     const { data: gc } = await supabase
       .from('calendar_integrations')
       .select('id, calendar_id, last_synced_at')
@@ -178,7 +179,7 @@ export default function AdminPanel() {
         ))}
       </div>
 
-      {/* USERS TAB */}
+      {/* ── USERS TAB ── */}
       {tab === 'users' && (
         <div className="crm-card" style={{ padding:0, overflow:'hidden' }}>
           <div style={{ padding:'16px 20px', borderBottom:'1px solid var(--border)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
@@ -190,7 +191,7 @@ export default function AdminPanel() {
             </button>
           </div>
           {loading ? (
-            <div style={{ padding:'32px', textAlign:'center', color:'var(--text-muted)' }}>Loading...</div>
+            <div style={{ padding:'32px', textAlign:'center', color:'var(--text-muted)' }}>Loading…</div>
           ) : (
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'13px' }}>
               <thead>
@@ -239,7 +240,7 @@ export default function AdminPanel() {
                     </td>
                     <td style={{ padding:'12px 16px' }}>
                       {saving === u.id
-                        ? <span style={{ color:'var(--text-muted)', fontSize:'12px' }}>Saving...</span>
+                        ? <span style={{ color:'var(--text-muted)', fontSize:'12px' }}>Saving…</span>
                         : <span style={{ fontSize:'11px', color:'var(--brand-green)' }}>
                             <Check size={12} style={{ display:'inline', marginRight:'3px' }} />Active
                           </span>
@@ -256,7 +257,7 @@ export default function AdminPanel() {
         </div>
       )}
 
-      {/* ROLE PREVIEW TAB */}
+      {/* ── ROLE PREVIEW TAB ── */}
       {tab === 'preview' && (
         <div className="crm-card" style={{ padding:'24px' }}>
           <div style={{ fontWeight:700, color:'var(--text-primary)', marginBottom:'8px' }}>Preview Role View</div>
@@ -279,21 +280,23 @@ export default function AdminPanel() {
                   color: 'var(--text-primary)',
                 }}
               >
-                <div style={{ fontWeight:700, fontSize:'13px', marginBottom:'4px' }}>{ROLE_LABELS[r]}</div>
+                <div style={{ fontWeight
+700, fontSize:'13px', marginBottom:'4px' }}>{ROLE_LABELS[r]}</div>
                 <div style={{ fontSize:'11px', color:'var(--text-muted)' }}>{r}</div>
               </button>
             ))}
           </div>
           <div style={{ marginTop:'16px', padding:'12px', background:'var(--bg-elevated)', borderRadius:'8px', fontSize:'12px', color:'var(--text-muted)' }}>
-            Redirects to home with selected role's navigation. Refresh to exit preview.
+            Redirects to home with selected role’s navigation. Refresh to exit preview.
           </div>
         </div>
       )}
 
-      {/* INTEGRATIONS TAB */}
+      {/* ── INTEGRATIONS TAB ── */}
       {tab === 'sources' && (
         <div style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
 
+          {/* Live integrations */}
           <div>
             <div style={{ fontSize:'11px', fontWeight:700, color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:'12px' }}>
               Live Integrations
@@ -303,20 +306,22 @@ export default function AdminPanel() {
               {/* Sheets Sync */}
               <div className="crm-card" style={{ padding:'18px 20px' }}>
                 <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'6px' }}>
-                  <div>
-                    <div style={{ fontWeight:700, color:'var(--text-primary)', fontSize:'13px' }}>BD Leads Sheet Sync</div>
-                    <div style={{ fontSize:'11px', color:'var(--text-muted)', marginTop:'1px' }}>
-                      {sheetsLastRun
-                        ? 'Last synced: ' + new Date(sheetsLastRun).toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })
-                        : 'Never synced'}
+                  <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+                    <div>
+                      <div style={{ fontWeight:700, color:'var(--text-primary
+                        SheetsLastRun
+                          ? 'Last synced: ' + new Date(sheetsLastRun).toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })
+                          : 'Never synced'}
+                      </div>
                     </div>
                   </div>
+                  {/* Toggle */}
                   <button
                     onClick={() => setSysSetting('sheets_sync_enabled', sheetsEnabled ? 'false' : 'true')}
                     style={{
                       width:'36px', height:'22px', borderRadius:'11px', border:'none', cursor:'pointer',
                       background: sheetsEnabled ? 'var(--brand-green)' : 'var(--border)',
-                      position:'relative', transition:'background .2s', flexShrink:0,
+                      position:/relative', transition:'background .2s', flexShrink:0,
                     }}
                   >
                     <span style={{
@@ -337,7 +342,7 @@ export default function AdminPanel() {
                   style={{ display:'flex', alignItems:'center', gap:'5px' }}
                 >
                   {syncing
-                    ? <><RefreshCw size={12} style={{ animation:'spin 1s linear infinite' }} /> Syncing...</>
+                    ? <><RefreshCw size={12} style={{ animation:'spin 1s linear infinite' }} /> Syncing…</>
                     : <><Play size={12} /> Sync Now</>
                   }
                 </button>
@@ -345,21 +350,23 @@ export default function AdminPanel() {
 
               {/* Google Calendar */}
               <div className="crm-card" style={{ padding:'18px 20px' }}>
-                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'6px' }}>
-                  <div>
-                    <div style={{ fontWeight:700, color:'var(--text-primary)', fontSize:'13px' }}>Google Calendar</div>
-                    <div style={{ fontSize:'11px', color:'var(--text-muted)', marginTop:'1px' }}>
-                      {gcStatus
-                        ? 'Connected - ' + (gcStatus.last_synced_at ? new Date(gcStatus.last_synced_at).toLocaleDateString() : 'not synced')
-                        : 'Not connected'}
+                <div style={{ display:'flex', alignItems:'center', justifyContent: 'space-between', marginBottom:'6px' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+                    <div>
+                      <div style={{ fontWeight:700, color:'var(--text-primary
+                        gcStatus
+                          ? 'Connected �" ' + (gcStatus.last_synced_at ? new Date(gcStatus.last_synced_at).toLocaleDateString() : 'not synced')
+                          : 'Not connected'}
+                      </div>
                     </div>
                   </div>
+                  {/* Calendar sync toggle */}
                   <button
                     onClick={() => setSysSetting('calendar_sync_enabled', calEnabled ? 'false' : 'true')}
                     style={{
                       width:'36px', height:'22px', borderRadius:'11px', border:'none', cursor:'pointer',
                       background: calEnabled ? 'var(--brand-green)' : 'var(--border)',
-                      position:'relative', transition:'background .2s', flexShrink:0,
+                      position:/relative', transition:'background .2s', flexShrink:0,
                     }}
                   >
                     <span style={{
@@ -371,7 +378,7 @@ export default function AdminPanel() {
                   </button>
                 </div>
                 <div style={{ fontSize:'12px', color:'var(--text-muted)', marginBottom:'12px' }}>
-                  Bidirectional sync between CRM calendar events and each user's Google Calendar. Users connect in Settings.
+                  Bidirectional sync between CRM calendar events and each user’s Google Calendar. Users connect in Settings.
                 </div>
                 <div style={{ display:'flex', alignItems:'center', gap:'6px', fontSize:'12px',
                   color: gcStatus ? '#4ade80' : 'var(--text-muted)' }}>
@@ -389,37 +396,43 @@ export default function AdminPanel() {
             <div style={{ fontSize:'11px', fontWeight:700, color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:'12px' }}>
               Available Connectors
             </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr       <div>
+            <div style={{ fontSize:'11px', fontWeight:700, color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:'12px' }}>
+              Available Connectors
+            </div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
               {INFO_CARDS.map(s => (
-                <div key={s.id} className="crm-card" style={{ padding:'16px 18px', opacity: s.status === 'planned' ? 0.7 : 1 }}>
-                  <div style={{ fontWeight:700, color:'var(--text-primary)', fontSize:'13px', marginBottom:'4px', display:'flex', alignItems:'center', gap:'8px' }}>
-                    {s.label}
-                    <span style={{
-                      fontSize:'10px', fontWeight:700, padding:'2px 6px', borderRadius:'999px',
-                      background: s.status === 'active'  ? 'rgba(34,197,94,0.15)'
-                                : s.status === 'dormant' ? 'rgba(245,158,11,0.15)'
-                                : 'rgba(100,116,139,0.15)',
-                      color: s.status === 'active'  ? '#4ade80'
-                           : s.status === 'dormant' ? '#fbbf24'
-                           : '#94a3b8',
-                    }}>
-                      {s.status.toUpperCase()}
-                    </span>
-                  </div>
-                  <div style={{ fontSize:'12px', color:'var(--text-muted)' }}>{s.desc}</div>
-                  {s.status === 'active' && (
-                    <div style={{ marginTop:'8px', display:'flex', alignItems:'center', gap:'5px', fontSize:'12px', color:'#4ade80' }}>
-                      <Check size={12} /> Connected
+                <div key={s.id} className="crm-card" style={{ padding:'16px 18px', display:'flex', gap:'12px', alignItems:'flex-start', opacity: s.status === 'planned' ? 0.7 : 1 }}>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontWeight:700, color:'var(--text-primary)', fontSize:'13px', marginBottom:'4px', display:'flex', alignItems:'center', gap:'8px' }}>
+                      {s.label}
+                      <span style={{
+                        fontSize:'10px', fontWeight:700, padding:'2px 6px', borderRadius:'999px',
+                        background: s.status === 'active'  ? 'rgba(34,197,94,0.15)'
+                                  : s.status === 'dormant' ? 'rgba(245,158,11,0.15)'
+                                  : 'rgba(100,116,139,0.15)',
+                        color: s.status === 'active'  ? '#4ade80'
+                             : s.status === 'dormant' ? '#fbbf24'
+                             : '#94a3b8',
+                      }}>
+                        {s.status.toUpperCase()}
+                      </span>
                     </div>
-                  )}
-                  {s.status === 'planned' && (
-                    <div style={{ marginTop:'8px', fontSize:'11px', color:'var(--text-muted)' }}>Phase 2</div>
-                  )}
-                  {s.status === 'dormant' && (
-                    <button className="btn btn-secondary btn-sm" disabled style={{ marginTop:'8px' }}>
-                      Activate (provide credentials)
-                    </button>
-                  )}
+                    <div style={{ fontSize:'12px', color:'var(--text-muted)' }}>{s.desc}</div>
+                    {s.status === 'active' && (
+                      <div style={{ marginTop:'8px', display:'flex', alignItems:'center', gap:'5px', fontSize:'12px', color:'#4ade80' }}>
+                        <Check size={12} /> Connected
+                      </div>
+                    )}
+                    {s.status === 'planned' && (
+                      <div style={{ marginTop:'8px', fontSize:'11px', color:'var(--text-muted)' }}>Phase 2</div>
+                    )}
+                    {s.status === 'dormant' && (
+                      <button className="btn btn-secondary btn-sm" disabled style={{ marginTop:'8px' }}>
+                        Activate (provide credentials)
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -428,7 +441,7 @@ export default function AdminPanel() {
         </div>
       )}
 
-      {/* AUDIT LOG TAB */}
+      {/* ── AUDIT LOG TAB ── */}
       {tab === 'audit' && (
         <div>
           <div style={{ display:'flex', gap:'10px', marginBottom:'16px', alignItems:'center' }}>
@@ -450,14 +463,14 @@ export default function AdminPanel() {
             </button>
             <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:'8px', fontSize:'12px', color:'var(--text-muted)' }}>
               <span>{'Page ' + (auditPage + 1)}</span>
-              <button onClick={() => setAuditPage(p => Math.max(0, p-1))} disabled={auditPage===0} className="btn btn-ghost btn-sm">Prev</button>
-              <button onClick={() => setAuditPage(p => p+1)} disabled={auditLogs.length < AUDIT_PAGE_SIZE} className="btn btn-ghost btn-sm">Next</button>
+              <button onClick={() => setAuditPage(p => Math.max(0, p-1))} disabled={auditPage===0} className="btn btn-ghost btn-sm">{'←'}</button>
+              <button onClick={() => setAuditPage(p => p+1)} disabled={auditLogs.length < AUDIT_PAGE_SIZE} className="btn btn-ghost btn-sm">{'→'}</button>
             </div>
           </div>
 
           <div className="crm-card" style={{ padding:0, overflow:'hidden' }}>
             {auditLoading ? (
-              <div style={{ padding:'32px', textAlign:'center', color:'var(--text-muted)' }}>Loading...</div>
+              <div style={{ padding:'32px', textAlign:'center', color:'var(--text-muted)' }}>Loading…</div>
             ) : auditLogs.length === 0 ? (
               <div style={{ padding:'48px', textAlign:'center', color:'var(--text-muted)', fontSize:'13px' }}>
                 No audit entries yet. Entries appear automatically when leads or profiles are modified.
