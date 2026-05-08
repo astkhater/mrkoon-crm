@@ -25,7 +25,7 @@ const VALID_STAGES = [
 const VALID_ENTITIES = ['EG', 'KSA']
 
 const COLUMN_MAP = {
-  // Canonical          → accepted aliases (lowercase)
+  // Canonical         → accepted aliases (lowercase)
   company_name:        ['company_name', 'company', 'name', 'account'],
   entity:              ['entity', 'market', 'country', 'region'],
   contact_name:        ['contact_name', 'contact', 'person', 'full_name'],
@@ -43,14 +43,13 @@ const COLUMN_MAP = {
 
 // ── CSV parser (handles quoted fields) ───────────────────────
 function parseCSV(text) {
-  const lines = text.split(/\r�\o
-/).filter(l => l.trim())
+  const lines = text.split(/\r?\n/).filter(l => l.trim())
   if (lines.length < 2) return { headers: [], rows: [] }
 
   function parseLine(line) {
     const fields = []
     let cur = ''
-    let inQ = false
+    let inQ  = false
     for (let i = 0; i < line.length; i++) {
       const c = line[i]
       if (c === '"') {
@@ -140,7 +139,7 @@ function transformRow(raw, headerMap, userId) {
   return { row, errors }
 }
 
-// ── Component ──────────────────────────────────────────────────
+// ── Component ─────────────────────────────────────────────────
 export default function Import() {
   const { userId }     = useAuth()
   const { t, toast }   = useApp()
@@ -154,7 +153,7 @@ export default function Import() {
   const [dragOver,    setDragOver]    = useState(false)
 
   // ── File handling ──────────────────────────────────────────
-const handleFile = useCallback(async (f) => {
+  const handleFile = useCallback(async (f) => {
     if (!f) return
     setFile(f)
     setParsed(null)
@@ -200,7 +199,7 @@ const handleFile = useCallback(async (f) => {
     if (f) handleFile(f)
   }
 
-  // ── Import ──────────────────────────────────────────────────
+  // ── Import ─────────────────────────────────────────────────
   async function handleImport() {
     if (!parsed?.valid?.length) return
     setImporting(true)
@@ -311,7 +310,7 @@ const handleFile = useCallback(async (f) => {
               background: 'var(--bg-card)', border: '1px solid var(--border-default)',
               marginBottom: '16px',
             }}>
-              <FileText size={_18} style={{ color: 'var(--brand-cyan)', flexShrink: 0 }} />
+              <FileText size={18} style={{ color: 'var(--brand-cyan)', flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {file.name}
@@ -473,25 +472,24 @@ const handleFile = useCallback(async (f) => {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px' }}>
               {Object.entries(COLUMN_MAP).map(([canon, aliases]) => (
-                <div key={canon} style={{ fontSize: '12px', color: 'var(--text-secondary' }}>
+                <div key={canon} style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
                   <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{canon}</span>
                   {' '}
                   <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
                     ({aliases.slice(0, 2).join(', ')})
                   </span>
                 </div>
-                ))}
-              </div>
-              <div style={{ marginTop: '12px', fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
-                <strong>Required:</strong> company_name, entity (EG or KSA)
-                <br />
-                <strong>Dates:</strong> YYYY-MM-DD, DD/MM/YYYY, or MM/DD/YYYY
-                <br />
-                <strong>Duplicates:</strong> skipped (same company_name + entity)
-              </div>
+              ))}
             </div>
-          )}
-        </div>
+            <div style={{ marginTop: '12px', fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
+              <strong>Required:</strong> company_name, entity (EG or KSA)
+              <br />
+              <strong>Dates:</strong> YYYY-MM-DD, DD/MM/YYYY, or MM/DD/YYYY
+              <br />
+              <strong>Duplicates:</strong> skipped (same company_name + entity)
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
