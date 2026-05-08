@@ -46,6 +46,7 @@ export default function ExecutiveDashboard() {
   async function loadData() {
     setLoading(true)
     try {
+      // Base query — filter by entity unless holding
       let q = supabase.from('leads').select('stage, entity, assigned_to')
       if (entityView !== 'holding') q = q.eq('entity', entityView)
       const { data: leads } = await q
@@ -59,7 +60,7 @@ export default function ExecutiveDashboard() {
 
   if (loading) return (
     <div className="page-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
-      <div style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Loading dashboard...</div>
+      <div style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Loading dashboard…</div>
     </div>
   )
 
@@ -70,9 +71,11 @@ export default function ExecutiveDashboard() {
   const clients = leads.filter(l => CLIENT_STAGES.includes(l.stage)).length
   const lost    = leads.filter(l => l.stage === 'lost').length
 
+  // Stage breakdown
   const stageCounts = {}
   STAGES.forEach(s => { stageCounts[s] = leads.filter(l => l.stage === s).length })
 
+  // Rep performance
   const repIds = [...new Set(leads.map(l => l.assigned_to).filter(Boolean))]
   const repStats = repIds.map(id => {
     const p = profiles.find(p => p.id === id)
@@ -85,6 +88,7 @@ export default function ExecutiveDashboard() {
     }
   }).sort((a,b) => b.active - a.active)
 
+  // Holding: entity comparison
   const egLeads  = data?.leads.filter(l => l.entity === 'EG')  ?? []
   const ksaLeads = data?.leads.filter(l => l.entity === 'KSA') ?? []
 
@@ -104,7 +108,9 @@ export default function ExecutiveDashboard() {
       </div>
 
       {entityView === 'holding' ? (
+        /* ── HOLDING VIEW ── */
         <>
+          {/* Cross-market KPIs */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px', marginBottom: '24px' }}>
             <KpiCard label="Total Leads" value={leads.length} sub="EG + KSA combined" />
             <KpiCard label="Active Pipeline" value={leads.filter(l=>ACTIVE_STAGES.includes(l.stage)).length} sub="In active stages" color="var(--brand-cyan)" />
@@ -112,6 +118,7 @@ export default function ExecutiveDashboard() {
             <KpiCard label="Lost" value={leads.filter(l=>l.stage==='lost').length} sub="All time" color="var(--danger)" />
           </div>
 
+          {/* EG vs KSA comparison */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
             <div className="crm-card" style={{ padding: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
@@ -152,6 +159,7 @@ export default function ExecutiveDashboard() {
             </div>
           </div>
 
+          {/* Cross-entity pipeline share */}
           <div className="crm-card" style={{ padding: '20px', marginBottom: '24px' }}>
             <div style={{ fontWeight: 700, marginBottom: '16px', color: 'var(--text-primary)' }}>Pipeline Distribution — Both Markets</div>
             {STAGES.filter(s => (stageCounts[s] ?? 0) > 0).map(s => (
@@ -160,15 +168,17 @@ export default function ExecutiveDashboard() {
           </div>
         </>
       ) : (
+        /* ── SINGLE ENTITY VIEW (EG or KSA) ── */
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px', marginBottom: '24px' }}>
             <KpiCard label="Total Leads"    value={total}   sub={entityView + ' entity'} />
-            <KpiCard label="Active Pipeline" value={active}  sub="Meeting to Negotiation" color="var(--brand-cyan)" />
+            <KpiCard label="Active Pipeline" value={active}  sub="Meeting → Negotiation" color="var(--brand-cyan)" />
             <KpiCard label="Active Clients"  value={clients} sub="Client active + renewal" color="#a78bfa" />
             <KpiCard label="Lost"            value={lost}    sub="Closed lost" color="var(--danger)" />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            {/* Stage breakdown */}
             <div className="crm-card" style={{ padding: '20px' }}>
               <div style={{ fontWeight: 700, marginBottom: '16px', color: 'var(--text-primary)' }}>Pipeline by Stage</div>
               {STAGES.filter(s => (stageCounts[s] ?? 0) > 0).map(s => (
@@ -177,6 +187,7 @@ export default function ExecutiveDashboard() {
               {total === 0 && <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>No leads in this entity yet.</div>}
             </div>
 
+            {/* Rep performance */}
             <div className="crm-card" style={{ padding: '20px' }}>
               <div style={{ fontWeight: 700, marginBottom: '16px', color: 'var(--text-primary)' }}>Team Performance</div>
               {repStats.length === 0 && <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>No reps with leads yet.</div>}
@@ -186,8 +197,8 @@ export default function ExecutiveDashboard() {
                     {r.name[0]}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{r.name}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{r.total + ' leads · ' + r.active + ' active · ' + r.clients + ' clients'}</div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', truncate: true }}>{r.name}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{r.total} leads · {r.active} active · {r.clients} clients</div>
                   </div>
                   <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--brand-cyan)' }}>{r.active}</div>
                 </div>
