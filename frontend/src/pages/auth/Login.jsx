@@ -70,87 +70,156 @@ export default function Login() {
     }}>
       <div style={{ width: '100%', maxWidth: '380px' }}>
         {logoBlock}
+
         <div className="crm-card" style={{ padding: '28px' }}>
+
           {mode === 'login' && (
             <form onSubmit={handleSubmit}>
               <div style={{ marginBottom: '16px' }}>
                 <label className="crm-label">{t('auth.email')}</label>
-                <input type="email" className="crm-input" value={email}
-                  onChange={e => setEmail(e.target.value)} placeholder="you@mrkoon.com"
-                  required autoFocus />
+                <input
+                  type="email"
+                  className="crm-input"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="you@mrkoon.com"
+                  required
+                  autoFocus
+                />
               </div>
+
               <div style={{ marginBottom: '8px' }}>
                 <label className="crm-label">{t('auth.password')}</label>
-                <input type="password" className="crm-input" value={pass}
-                  onChange={e => setPass(e.target.value)} placeholder="••••••••" required />
+                <input
+                  type="password"
+                  className="crm-input"
+                  value={pass}
+                  onChange={e => setPass(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                />
               </div>
+
               <div style={{ textAlign: 'right', marginBottom: '20px' }}>
-                <button type="button"
+                <button
+                  type="button"
                   onClick={() => { setResetEmail(email); setErr(''); setMode('forgot') }}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer',
-                    fontSize: '12px', color: 'var(--brand-green)', padding: 0, textDecoration: 'underline' }}>
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    fontSize: '12px', color: 'var(--brand-green)', padding: 0,
+                    textDecoration: 'underline',
+                  }}
+                >
                   Forgot password?
                 </button>
               </div>
+
               {err && (
-                <div style={{ padding: '10px 12px', borderRadius: '6px', marginBottom: '16px',
+                <div style={{
+                  padding: '10px 12px', borderRadius: '6px', marginBottom: '16px',
                   background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
-                  color: '#ef4444', fontSize: '13px' }}>{err}</div>
+                  color: '#ef4444', fontSize: '13px',
+                }}>
+                  {err}
+                </div>
               )}
-              <button type="submit" disabled={busy} className="btn btn-primary btn-lg w-full" style={{ width: '100%' }}>
+
+              <button
+                type="submit"
+                disabled={busy}
+                className="btn btn-primary btn-lg w-full"
+                style={{ width: '100%' }}
+              >
                 {busy ? t('auth.signing_in') : t('auth.signin')}
               </button>
             </form>
           )}
+
           {mode === 'forgot' && (
             <form onSubmit={handleReset}>
-              <div style={{ marginBottom: '6px', fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>Reset password</div>
+              <div style={{ marginBottom: '6px', fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                Reset password
+              </div>
               <div style={{ marginBottom: '20px', fontSize: '13px', color: 'var(--text-secondary)' }}>
                 Enter your email and we will send you a reset link.
               </div>
+
               <div style={{ marginBottom: '20px' }}>
                 <label className="crm-label">{t('auth.email')}</label>
-                <input type="email" className="crm-input" value={resetEmail}
-                  onChange={e => setResetEmail(e.target.value)} placeholder="you@mrkoon.com" required autoFocus />
+                <input
+                  type="email"
+                  className="crm-input"
+                  value={resetEmail}
+                  onChange={e => setResetEmail(e.target.value)}
+                  placeholder="you@mrkoon.com"
+                  required
+                  autoFocus
+                />
               </div>
+
               {err && (
-                <div style={{ padding: '10px 12px', borderRadius: '6px', marginBottom: '16px',
+                <div style={{
+                  padding: '10px 12px', borderRadius: '6px', marginBottom: '16px',
                   background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
-                  color: '#ef4444', fontSize: '13px' }}>{err}</div>
+                  color: '#ef4444', fontSize: '13px',
+                }}>
+                  {err}
+                </div>
               )}
-              <button type="submit" disabled={busy} className="btn btn-primary btn-lg w-full"
-                style={{ width: '100%', marginBottom: '12px' }}>
+
+              <button
+                type="submit"
+                disabled={busy}
+                className="btn btn-primary btn-lg w-full"
+                style={{ width: '100%', marginBottom: '12px' }}
+              >
                 {busy ? 'Sending...' : 'Send reset link'}
               </button>
-              <button type="button" onClick={() => { setErr(''); setMode('login') }}
-                className="btn btn-ghost btn-sm" style={{ width: '100%' }}>
+
+              <button
+                type="button"
+                onClick={() => { setErr(''); setMode('login') }}
+                className="btn btn-ghost btn-sm"
+                style={{ width: '100%' }}
+              >
                 Back to sign in
               </button>
             </form>
           )}
+
           {mode === 'sent' && (
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '32px', marginBottom: '12px' }}>✉️</div>
+              <div style={{ fontSize: '32px', marginBottom: '12px' }}>&#x2709;&#xfe0f;</div>
               <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}>
                 Check your email
               </div>
               <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '24px' }}>
                 A password reset link was sent to <strong>{resetEmail}</strong>
               </div>
-              <button type="button" onClick={() => { setErr(''); setMode('login') }}
-                className="btn btn-ghost btn-sm" style={{ width: '100%' }}>
+              <button
+                type="button"
+                onClick={() => { setErr(''); setMode('login') }}
+                className="btn btn-ghost btn-sm"
+                style={{ width: '100%' }}
+              >
                 Back to sign in
               </button>
             </div>
           )}
+
         </div>
+
         <div style={{ textAlign: 'center', marginTop: '20px' }}>
-          <button onClick={() => setLang(lang === 'en' ? 'ar' : 'en')} className="btn btn-ghost btn-sm">
+          <button
+            onClick={() => setLang(lang === 'en' ? 'ar' : 'en')}
+            className="btn btn-ghost btn-sm"
+          >
             {lang === 'en' ? 'عربي' : 'English'}
           </button>
         </div>
+
         <div style={{ textAlign: 'center', marginTop: '24px', fontSize: '11px', color: 'var(--text-muted)' }}>
-          Mrkoon BD CRM v1  •  Egypt
+          Mrkoon BD CRM v1  •  Egypt
         </div>
       </div>
     </div>
