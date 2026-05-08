@@ -1,5 +1,10 @@
 /**
  * Import — CSV/Excel bulk lead import
+ * Columns accepted: company_name, entity, contact_name, contact_title,
+ *   phone, email, stage, estimated_gmv_month, next_action, next_action_date,
+ *   notes, source, date_added
+ * Unknown columns are silently ignored.
+ * Duplicate detection: same company_name + entity = skip (warn user).
  */
 import { useState, useRef, useCallback } from 'react'
 import { useQueryClient }                from '@tanstack/react-query'
@@ -9,6 +14,7 @@ import { useAuth }   from '@/contexts/AuthContext'
 import { useApp }    from '@/contexts/AppContext'
 import TopBar        from '@/components/layout/TopBar'
 
+// ── Constants ─────────────────────────────────────────────────
 const VALID_STAGES = [
   'new_lead','reaching_out','no_response','meeting_done',
   'negotiation','prospect_active','prospect_cold',
@@ -19,6 +25,7 @@ const VALID_STAGES = [
 const VALID_ENTITIES = ['EG', 'KSA']
 
 const COLUMN_MAP = {
+  // Canonical          → accepted aliases (lowercase)
   company_name:        ['company_name', 'company', 'name', 'account'],
   entity:              ['entity', 'market', 'country', 'region'],
   contact_name:        ['contact_name', 'contact', 'person', 'full_name'],
@@ -34,14 +41,16 @@ const COLUMN_MAP = {
   date_added:          ['date_added', 'added', 'created_at', 'date'],
 }
 
+// ── CSV parser (handles quoted fields) ───────────────────────
 function parseCSV(text) {
-  const lines = text.split(/\r?\n/).filter(l => l.trim())
+  const lines = text.split(/\r�\o
+/).filter(l => l.trim())
   if (lines.length < 2) return { headers: [], rows: [] }
 
   function parseLine(line) {
     const fields = []
     let cur = ''
-    let inQ  = false
+    let inQ = false
     for (let i = 0; i < line.length; i++) {
       const c = line[i]
       if (c === '"') {
@@ -68,6 +77,7 @@ function parseCSV(text) {
   return { headers, rows }
 }
 
+// ── Map raw headers to canonical column names ─────────────────
 function buildHeaderMap(rawHeaders) {
   const map = {}
   for (const raw of rawHeaders) {
@@ -81,6 +91,7 @@ function buildHeaderMap(rawHeaders) {
   return map
 }
 
+// ── Validate & transform a single row ────────────────────────
 function transformRow(raw, headerMap, userId) {
   const row = {}
   for (const [rawKey, val] of Object.entries(raw)) {
@@ -90,25 +101,29 @@ function transformRow(raw, headerMap, userId) {
 
   const errors = []
 
+  // Required
   if (!row.company_name) errors.push('Missing company_name')
   if (!row.entity)       errors.push('Missing entity')
-  else if (!VALID_ENTITIES.includes(row.entity.toUpperCase())) errors.push('Invalid entity "' + row.entity + '"')
+  else if (!VALID_ENTITIES.includes(row.entity.toUpperCase())) errors.push(`Invalid entity "${row.entity}"`)
   else row.entity = row.entity.toUpperCase()
 
+  // Stage default
   if (!row.stage) {
     row.stage = 'new_lead'
   } else if (!VALID_STAGES.includes(row.stage)) {
-    errors.push('Invalid stage "' + row.stage + '"')
+    errors.push(`Invalid stage "${row.stage}"`)
   }
 
+  // Numeric
   if (row.estimated_gmv_month != null) {
     const n = parseFloat(String(row.estimated_gmv_month).replace(/,/g, ''))
     row.estimated_gmv_month = isNaN(n) ? null : n
   }
 
+  // Dates
   if (row.next_action_date) {
     const parsed = parseDate(row.next_action_date)
-    if (!parsed) errors.push('Invalid date "' + row.next_action_date + '"')
+    if (!parsed) errors.push(`Invalid date "${row.next_action_date}"`)
     else row.next_action_date = parsed
   }
   if (row.date_added) {
@@ -118,12 +133,14 @@ function transformRow(raw, headerMap, userId) {
     row.date_added = new Date().toISOString().slice(0, 10)
   }
 
+  // System fields
   row.assigned_to = userId
   row.is_sna      = false
 
   return { row, errors }
 }
 
+// ── Component ──────────────────────────────────────────────────
 export default function Import() {
   const { userId }     = useAuth()
   const { t, toast }   = useApp()
@@ -131,12 +148,13 @@ export default function Import() {
   const inputRef       = useRef(null)
 
   const [file,        setFile]        = useState(null)
-  const [parsed,      setParsed]      = useState(null)
+  const [parsed,      setParsed]      = useState(null)   // { valid, skipped, errors }
   const [importing,   setImporting]   = useState(false)
-  const [result,      setResult]      = useState(null)
+  const [result,      setResult]      = useState(null)   // { inserted, duplicates, errors }
   const [dragOver,    setDragOver]    = useState(false)
 
-  const handleFile = useCallback(async (f) => {
+  // ── File handling ──────────────────────────────────────────
+const handleFile = useCallback(async (f) => {
     if (!f) return
     setFile(f)
     setParsed(null)
@@ -148,13 +166,13 @@ export default function Import() {
     if (f.name.endsWith('.csv')) {
       raw = parseCSV(text)
     } else {
-      toast('Only CSV files are supported. Export your spreadsheet as CSV first.', 'error')
+      toast({ type: 'error', message: 'Only CSV files are supported. Export your spreadsheet as CSV first.' })
       setFile(null)
       return
     }
 
     if (raw.rows.length === 0) {
-      toast('File is empty or has no data rows.', 'error')
+      toast({ type: 'error', message: 'File is empty or has no data rows.' })
       setFile(null)
       return
     }
@@ -182,23 +200,25 @@ export default function Import() {
     if (f) handleFile(f)
   }
 
+  // ── Import ──────────────────────────────────────────────────
   async function handleImport() {
     if (!parsed?.valid?.length) return
     setImporting(true)
 
     try {
+      // Fetch existing (company_name + entity) to detect duplicates
       const { data: existing } = await supabase
         .from('leads')
         .select('company_name, entity')
         .eq('assigned_to', userId)
 
-      const existingSet = new Set((existing ?? []).map(r => r.company_name + '||' + r.entity))
+      const existingSet = new Set((existing ?? []).map(r => `${r.company_name}||${r.entity}`))
 
       const toInsert   = []
       const duplicates = []
 
       for (const row of parsed.valid) {
-        const key = row.company_name + '||' + row.entity
+        const key = `${row.company_name}||${row.entity}`
         if (existingSet.has(key)) duplicates.push(row.company_name)
         else toInsert.push(row)
       }
@@ -207,6 +227,7 @@ export default function Import() {
       let insertErrors  = []
 
       if (toInsert.length > 0) {
+        // Insert in batches of 100
         for (let i = 0; i < toInsert.length; i += 100) {
           const batch = toInsert.slice(i, i + 100)
           const { error } = await supabase.from('leads').insert(batch)
@@ -220,10 +241,10 @@ export default function Import() {
       if (insertedCount > 0) {
         queryClient.invalidateQueries({ queryKey: ['leads'] })
         queryClient.invalidateQueries({ queryKey: ['accounts'] })
-        toast(insertedCount + ' lead' + (insertedCount !== 1 ? 's' : '') + ' imported', 'success')
+        toast({ type: 'success', message: `${insertedCount} lead${insertedCount !== 1 ? 's' : ''} imported` })
       }
     } catch (err) {
-      toast(err.message ?? 'Import failed', 'error')
+      toast({ type: 'error', message: err.message ?? 'Import failed' })
     } finally {
       setImporting(false)
     }
@@ -236,12 +257,14 @@ export default function Import() {
     if (inputRef.current) inputRef.current.value = ''
   }
 
+  // ── Render ─────────────────────────────────────────────────
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <TopBar title={t('nav.import')} />
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '24px', maxWidth: '680px' }}>
 
+        {/* Drop zone */}
         {!file && (
           <div
             onDrop={handleDrop}
@@ -249,7 +272,7 @@ export default function Import() {
             onDragLeave={() => setDragOver(false)}
             onClick={() => inputRef.current?.click()}
             style={{
-              border: '2px dashed ' + (dragOver ? 'var(--brand-cyan)' : 'var(--border-default)'),
+              border: `2px dashed ${dragOver ? 'var(--brand-cyan)' : 'var(--border-default)'}`,
               borderRadius: '12px',
               padding: '48px 24px',
               textAlign: 'center',
@@ -278,15 +301,17 @@ export default function Import() {
           </div>
         )}
 
+        {/* File selected — preview */}
         {file && parsed && !result && (
           <div>
+            {/* File header */}
             <div style={{
               display: 'flex', alignItems: 'center', gap: '10px',
               padding: '14px 16px', borderRadius: '10px',
               background: 'var(--bg-card)', border: '1px solid var(--border-default)',
               marginBottom: '16px',
             }}>
-              <FileText size={18} style={{ color: 'var(--brand-cyan)', flexShrink: 0 }} />
+              <FileText size={_18} style={{ color: 'var(--brand-cyan)', flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {file.name}
@@ -300,29 +325,59 @@ export default function Import() {
               </button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
-              <div style={{ padding: '14px', borderRadius: '8px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)' }}>
-                <div style={{ fontSize: '22px', fontWeight: 700, color: '#22c55e' }}>{parsed.valid.length}</div>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>Ready to import</div>
+            {/* Summary */}
+            <div style={{
+              display: 'grid', gridTemplateColumns: '1fr 1fr',
+              gap: '10px', marginBottom: '16px',
+            }}>
+              <div style={{
+                padding: '14px', borderRadius: '8px',
+                background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)',
+              }}>
+                <div style={{ fontSize: '22px', fontWeight: 700, color: '#22c55e' }}>
+                  {parsed.valid.length}
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  Ready to import
+                </div>
               </div>
               <div style={{
                 padding: '14px', borderRadius: '8px',
                 background: parsed.skipped.length > 0 ? 'rgba(239,68,68,0.08)' : 'var(--bg-card)',
-                border: '1px solid ' + (parsed.skipped.length > 0 ? 'rgba(239,68,68,0.2)' : 'var(--border-default)'),
+                border: `1px solid ${parsed.skipped.length > 0 ? 'rgba(239,68,68,0.2)' : 'var(--border-default)'}`,
               }}>
-                <div style={{ fontSize: '22px', fontWeight: 700, color: parsed.skipped.length > 0 ? '#ef4444' : 'var(--text-muted)' }}>{parsed.skipped.length}</div>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>Rows with errors</div>
+                <div style={{ fontSize: '22px', fontWeight: 700, color: parsed.skipped.length > 0 ? '#ef4444' : 'var(--text-muted)' }}>
+                  {parsed.skipped.length}
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  Rows with errors
+                </div>
               </div>
             </div>
 
+            {/* Error rows */}
             {parsed.skipped.length > 0 && (
-              <div style={{ marginBottom: '16px', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.2)', overflow: 'hidden' }}>
-                <div style={{ padding: '10px 14px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#ef4444', background: 'rgba(239,68,68,0.06)', borderBottom: '1px solid rgba(239,68,68,0.15)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{
+                marginBottom: '16px', borderRadius: '8px',
+                border: '1px solid rgba(239,68,68,0.2)',
+                overflow: 'hidden',
+              }}>
+                <div style={{
+                  padding: '10px 14px', fontSize: '11px', fontWeight: 700,
+                  textTransform: 'uppercase', letterSpacing: '0.05em',
+                  color: '#ef4444', background: 'rgba(239,68,68,0.06)',
+                  borderBottom: '1px solid rgba(239,68,68,0.15)',
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                }}>
                   <AlertTriangle size={12} /> Skipped rows
                 </div>
                 <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
                   {parsed.skipped.slice(0, 20).map((s, i) => (
-                    <div key={i} style={{ padding: '8px 14px', fontSize: '12px', borderBottom: '1px solid var(--border-default)', color: 'var(--text-secondary)' }}>
+                    <div key={i} style={{
+                      padding: '8px 14px', fontSize: '12px',
+                      borderBottom: '1px solid var(--border-default)',
+                      color: 'var(--text-secondary)',
+                    }}>
                       <span style={{ color: 'var(--text-muted)', marginRight: '6px' }}>Row {i + 2}:</span>
                       {s.errors.join(', ')}
                     </div>
@@ -336,27 +391,44 @@ export default function Import() {
               </div>
             )}
 
+            {/* Actions */}
             {parsed.valid.length > 0 && (
               <div style={{ display: 'flex', gap: '10px' }}>
-                <button className="btn btn-primary btn-md" onClick={handleImport} disabled={importing} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <button
+                  className="btn btn-primary btn-md"
+                  onClick={handleImport}
+                  disabled={importing}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
                   <Upload size={14} />
-                  {importing ? 'Importing…' : 'Import ' + parsed.valid.length + ' lead' + (parsed.valid.length !== 1 ? 's' : '')}
+                  {importing ? 'Importing…' : `Import ${parsed.valid.length} lead${parsed.valid.length !== 1 ? 's' : ''}`}
                 </button>
-                <button className="btn btn-ghost btn-md" onClick={reset}>Cancel</button>
+                <button className="btn btn-ghost btn-md" onClick={reset}>
+                  Cancel
+                </button>
               </div>
             )}
 
             {parsed.valid.length === 0 && (
               <div style={{ display: 'flex', gap: '10px' }}>
-                <button className="btn btn-ghost btn-md" onClick={reset}>Try another file</button>
+                <button className="btn btn-ghost btn-md" onClick={reset}>
+                  Try another file
+                </button>
               </div>
             )}
           </div>
         )}
 
+        {/* Result */}
         {result && (
           <div>
-            <div style={{ padding: '20px', borderRadius: '12px', background: result.inserted > 0 ? 'rgba(34,197,94,0.06)' : 'var(--bg-card)', border: '1px solid ' + (result.inserted > 0 ? 'rgba(34,197,94,0.2)' : 'var(--border-default)'), marginBottom: '16px', display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
+            <div style={{
+              padding: '20px',  borderRadius: '12px',
+              background: result.inserted > 0 ? 'rgba(34,197,94,0.06)' : 'var(--bg-card)',
+              border: `1px solid ${result.inserted > 0 ? 'rgba(34,197,94,0.2)' : 'var(--border-default)'}`,
+              marginBottom: '16px',
+              display: 'flex', alignItems: 'flex-start', gap: '14px',
+            }}>
               {result.inserted > 0
                 ? <CheckCircle2 size={22} style={{ color: '#22c55e', flexShrink: 0, marginTop: '1px' }} />
                 : <AlertTriangle size={22} style={{ color: '#f59e0b', flexShrink: 0, marginTop: '1px' }} />
@@ -364,14 +436,14 @@ export default function Import() {
               <div>
                 <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px' }}>
                   {result.inserted > 0
-                    ? result.inserted + ' lead' + (result.inserted !== 1 ? 's' : '') + ' imported successfully'
+                    ? `${result.inserted} lead${result.inserted !== 1 ? 's' : ''} imported successfully`
                     : 'No leads imported'
                   }
                 </div>
                 {result.duplicates.length > 0 && (
                   <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '6px' }}>
                     {result.duplicates.length} duplicate{result.duplicates.length !== 1 ? 's' : ''} skipped:
-                    {' '}{result.duplicates.slice(0, 5).join(', ')}{result.duplicates.length > 5 ? ' and ' + (result.duplicates.length - 5) + ' more' : ''}
+                    {' '}{result.duplicates.slice(0, 5).join(', ')}{result.duplicates.length > 5 ? ` and ${result.duplicates.length - 5} more` : ''}
                   </div>
                 )}
                 {result.errors.length > 0 && (
@@ -381,48 +453,64 @@ export default function Import() {
                 )}
               </div>
             </div>
-            <button className="btn btn-ghost btn-md" onClick={reset}>Import another file</button>
+
+            <button className="btn btn-ghost btn-md" onClick={reset}>
+              Import another file
+            </button>
           </div>
         )}
 
+        {/* Column reference */}
         {!file && (
           <div style={{ marginTop: '32px' }}>
-            <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '10px', paddingBottom: '6px', borderBottom: '1px solid var(--border-default)' }}>
+            <div style={{
+              fontSize: '11px', fontWeight: 700, textTransform: 'uppercase',
+              letterSpacing: '0.06em', color: 'var(--text-muted)',
+              marginBottom: '10px', paddingBottom: '6px',
+              borderBottom: '1px solid var(--border-default)',
+            }}>
               Supported columns
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px' }}>
               {Object.entries(COLUMN_MAP).map(([canon, aliases]) => (
-                <div key={canon} style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                <div key={canon} style={{ fontSize: '12px', color: 'var(--text-secondary' }}>
                   <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{canon}</span>
                   {' '}
                   <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
                     ({aliases.slice(0, 2).join(', ')})
                   </span>
                 </div>
-              ))}
+                ))}
+              </div>
+              <div style={{ marginTop: '12px', fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
+                <strong>Required:</strong> company_name, entity (EG or KSA)
+                <br />
+                <strong>Dates:</strong> YYYY-MM-DD, DD/MM/YYYY, or MM/DD/YYYY
+                <br />
+                <strong>Duplicates:</strong> skipped (same company_name + entity)
+              </div>
             </div>
-            <div style={{ marginTop: '12px', fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
-              <strong>Required:</strong> company_name, entity (EG or KSA)<br />
-              <strong>Dates:</strong> YYYY-MM-DD, DD/MM/YYYY, or MM/DD/YYYY<br />
-              <strong>Duplicates:</strong> skipped (same company_name + entity)
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   )
 }
 
+// ── Date parser ───────────────────────────────────────────────
 function parseDate(raw) {
   if (!raw) return null
   const trimmed = String(raw).trim()
+  // Accept YYYY-MM-DD, DD/MM/YYYY, MM/DD/YYYY
   const iso = trimmed.match(/^\d{4}-\d{2}-\d{2}$/)
   if (iso) return trimmed
-  const parts = trimmed.split(/[\/\-.]/)
+  const parts = trimmed.split(/[/\-.]/)
   if (parts.length === 3) {
     const [a, b, c] = parts.map(Number)
-    if (a > 31) return a + '-' + String(b).padStart(2,'0') + '-' + String(c).padStart(2,'0')
-    return c + '-' + String(b).padStart(2,'0') + '-' + String(a).padStart(2,'0')
+    // If first part > 31 -> YYYY/MM/DD
+    if (a > 31) return `${a}-${String(b).padStart(2,'0')}-${String(c).padStart(2,'0')}`
+    // Assume DD/MM/YYYY
+    return `${c}-${String(b).padStart(2,'0')}-${String(a).padStart(2,'0')}`
   }
   return null
 }
