@@ -31,11 +31,13 @@ export default function Settings() {
   const navigate        = useNavigate()
   const [searchParams]  = useSearchParams()
   const queryClient     = useQueryClient()
+
   const [fullName,      setFullName]      = useState('')
   const [phone,         setPhone]         = useState('')
   const [saving,        setSaving]        = useState(false)
   const [saved,         setSaved]         = useState(false)
   const [disconnecting, setDisconnecting] = useState(false)
+
   const [newPassword,   setNewPassword]   = useState('')
   const [confirmPw,     setConfirmPw]     = useState('')
   const [pwSaving,      setPwSaving]      = useState(false)
@@ -44,18 +46,18 @@ export default function Settings() {
   const { data: integration, isLoading: intLoading } = useQuery({
     queryKey: ['google-integration', userId],
     queryFn:  () => fetchIntegration(userId),
-    staleTime: 30000,
+    staleTime: 30_000,
   })
   const googleConnected = integration?.is_active === true
 
   useEffect(() => {
     const gc = searchParams.get('gc')
     if (gc === 'ok') {
-      toast('Google Calendar connected!', 'success')
+      toast({ type: 'success', message: 'Google Calendar connected!' })
       queryClient.invalidateQueries({ queryKey: ['google-integration'] })
       navigate('/settings', { replace: true })
     } else if (gc === 'error') {
-      toast(`Google Calendar connection failed (${searchParams.get('reason') ?? 'unknown'})`, 'error')
+      toast({ type: 'error', message: `Google Calendar connection failed (${searchParams.get('reason') ?? 'unknown'})` })
       navigate('/settings', { replace: true })
     }
   }, [searchParams])
@@ -71,10 +73,10 @@ export default function Settings() {
     try {
       const { error } = await supabase.from('profiles').update({ full_name: fullName.trim(), phone: phone.trim() || null }).eq('id', userId)
       if (error) throw error
-      toast('Profile saved', 'success')
+      toast({ type: 'success', message: 'Profile saved' })
       setSaved(true); setTimeout(() => setSaved(false), 2500)
-    } catch (err) { toast(err.message ?? 'Failed to save', 'error') }
-    finally { setSaving(false) }
+    } catch (err) { toast({ type: 'error', message: err.message ?? 'Failed to save' })
+    } finally { setSaving(false) }
   }
 
   async function handleChangePassword(e) {
@@ -86,15 +88,15 @@ export default function Settings() {
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword })
       if (error) throw error
-      toast('Password updated successfully', 'success')
+      toast({ type: 'success', message: 'Password updated successfully' })
       setNewPassword(''); setConfirmPw('')
-    } catch (err) { setPwError(err.message ?? 'Failed to update password') }
-    finally { setPwSaving(false) }
+    } catch (err) { setPwError(err.message ?? 'Failed to update password')
+    } finally { setPwSaving(false) }
   }
 
   async function handleGoogleConnect() {
     const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.access_token) { toast('Not authenticated', 'error'); return }
+    if (!session?.access_token) { toast({ type: 'error', message: 'Not authenticated' }); return }
     window.location.href = buildGoogleOAuthUrl(session.access_token)
   }
 
@@ -105,9 +107,9 @@ export default function Settings() {
       const { error } = await supabase.rpc('disconnect_google_calendar', { p_user_id: userId })
       if (error) throw error
       queryClient.invalidateQueries({ queryKey: ['google-integration'] })
-      toast('Google Calendar disconnected', 'success')
-    } catch (err) { toast(err.message ?? 'Failed to disconnect', 'error') }
-    finally { setDisconnecting(false) }
+      toast({ type: 'success', message: 'Google Calendar disconnected' })
+    } catch (err) { toast({ type: 'error', message: err.message ?? 'Failed to disconnect' })
+    } finally { setDisconnecting(false) }
   }
 
   function formatSyncTime(ts) {
@@ -125,6 +127,7 @@ export default function Settings() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <TopBar title={t('nav.settings')} />
       <div style={{ flex: 1, overflowY: 'auto', padding: '24px', maxWidth: '560px' }}>
+
         <Section title="Profile">
           <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div>
@@ -144,6 +147,7 @@ export default function Settings() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <button type="submit" className="btn btn-primary btn-md" disabled={saving}>{saving ? 'Saving...' : saved ? 'Saved' : t('action.save')}</button>
               <span style={{ fontSize: '11px', color: 'var(--text-muted)', background: 'var(--bg-hover)', padding: '4px 10px', borderRadius: '20px' }}>{profile?.role?.toUpperCase().replace('_',' ')}</span>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', background: 'var(--bg-hover)', padding: '4px 10px', borderRadius: '20px' }}>{profile?.entity === 'KSA' ? 'KSA' : 'Egypt'}</span>
             </div>
           </form>
         </Section>
@@ -156,7 +160,7 @@ export default function Settings() {
                : <AlertCircle size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{googleConnected ? 'Connected' : 'Not connected'}</div>
-                {googleConnected && integration?.google_calendar_id && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{integration.google_calendar_id}</div>}
+                {googleConnected && integration?.google_calendar_id && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{integration.google_calendar_id}</div>}
                 {!googleConnected && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Connect to sync CRM events with your Google Calendar</div>}
               </div>
               {googleConnected
@@ -170,14 +174,18 @@ export default function Settings() {
                 <DetailRow label="Sync direction">CRM to Google Calendar + Google Calendar to CRM</DetailRow>
               </div>
             )}
+            {!googleConnected && !intLoading && (
+              <div style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
+                Clicking Connect will open Google's authorization page. Once approved, events you create in the CRM will automatically appear in your Google Calendar, and vice versa.
+              </div>
+            )}
           </div>
         </Section>
 
         <Section title="Theme">
           <div style={{ display: 'flex', gap: '8px' }}>
             {THEME_OPTIONS.map(({ key, label, icon: Icon }) => (
-              <button key={key} onClick={() => setTheme(key)} className={`btn btn-md ${theme === key ? 'btn-primary' : 'btn-ghost'}`}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, justifyContent: 'center' }}>
+              <button key={key} onClick={() => setTheme(key)} className={`btn btn-md ${theme === key ? 'btn-primary' : 'btn-ghost'}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, justifyContent: 'center' }}>
                 <Icon size={13} />{label}
               </button>
             ))}
@@ -187,8 +195,7 @@ export default function Settings() {
         <Section title="Language">
           <div style={{ display: 'flex', gap: '8px' }}>
             {[{ key: 'en', label: 'English' }, { key: 'ar', label: 'Arabic' }].map(({ key, label }) => (
-              <button key={key} onClick={() => setLang(key)} className={`btn btn-md ${lang === key ? 'btn-primary' : 'btn-ghost'}`}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, justifyContent: 'center' }}>
+              <button key={key} onClick={() => setLang(key)} className={`btn btn-md ${lang === key ? 'btn-primary' : 'btn-ghost'}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, justifyContent: 'center' }}>
                 <Globe size={13} />{label}
               </button>
             ))}
@@ -223,7 +230,7 @@ export default function Settings() {
                 <input className="crm-input" style={{ paddingLeft: '30px' }} type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} placeholder="Repeat password" autoComplete="new-password" />
               </div>
             </div>
-            {pwError && <div style={{ fontSize: '12px', color: '#ef4444', background: 'rgba(239,68,68,0.08)', padding: '8px 12px', borderRadius: '6px' }}>{pwError}</div>}
+            {pwError && <div style={{ fontSize: '12px', color: 'var(--red)', background: 'rgba(239,68,68,0.08)', padding: '8px 12px', borderRadius: '6px' }}>{pwError}</div>}
             <button type="submit" className="btn btn-primary btn-md" disabled={pwSaving || !newPassword}>{pwSaving ? 'Updating...' : 'Update password'}</button>
           </form>
         </Section>
