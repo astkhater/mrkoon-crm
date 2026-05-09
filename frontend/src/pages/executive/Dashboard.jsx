@@ -210,4 +210,33 @@ export default function ExecutiveDashboard() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             {/* Stage breakdown */}
             <div className="crm-card" style={{ padding: '20px' }}>
-              <div style={
+              <div style={{ fontWeight: 700, marginBottom: '16px', color: 'var(--text-primary)' }}>Pipeline by Stage</div>
+              {STAGES.filter(s => (stageCounts[s] ?? 0) > 0).map(s => (
+                <StageBar key={s} label={s} count={stageCounts[s] ?? 0} total={total} color="var(--brand-green)" />
+              ))}
+              {total === 0 && <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>No leads in this entity yet.</div>}
+            </div>
+
+            {/* Rep performance */}
+            <div className="crm-card" style={{ padding: '20px' }}>
+              <div style={{ fontWeight: 700, marginBottom: '16px', color: 'var(--text-primary)' }}>Team Performance</div>
+              {repStats.length === 0 && <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>No reps with leads yet.</div>}
+              {repStats.map(r => (
+                <div key={r.name} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', padding: '10px', background: 'var(--bg-elevated)', borderRadius: '8px' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--brand-green)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                    {r.name[0]}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', truncate: true }}>{r.name}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{r.total} leads · {r.active} active · {r.clients} clients</div>
+                  </div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--brand-cyan)' }}>{r.active}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
