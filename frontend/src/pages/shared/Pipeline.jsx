@@ -273,6 +273,7 @@ function KanbanColumn({ stageKey, color, leads, label, onCardClick }) {
       <div style={{
         flex: 1,
         overflowY: 'auto',
+        overflowX: 'hidden',
         padding: '6px',
         background: 'var(--bg-hover)',
         border: '1px solid var(--border-default)',
