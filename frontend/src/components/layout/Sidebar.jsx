@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import {
   LayoutDashboard, Users, TrendingUp, Briefcase,
   Calendar, RefreshCw, Upload, Settings, Sparkles, LogOut,
-  ShieldCheck, HelpCircle, Briefcase as BriefcaseIcon, X
+  ShieldCheck, HelpCircle, Briefcase as BriefcaseIcon, X, ClipboardList
 } from 'lucide-react'
 import { useAuth }   from '@/contexts/AuthContext'
 import { useApp }    from '@/contexts/AppContext'
@@ -50,6 +50,11 @@ const NAV_AM = [
   { key: 'nav.settings',  icon: Settings,        href: '/settings' },
 ]
 
+const NAV_MODERATOR = [
+  { key: 'nav.data_entry', icon: ClipboardList, href: '/data-entry', label: 'Data Entry' },
+  { key: 'nav.settings',   icon: Settings,      href: '/settings' },
+]
+
 export default function Sidebar({ onShowTour }) {
   const {
     role, isAdmin, isExecutive, isCCO, isCEO, isCOO, isTL, isBDRep, isAM, isKSAClevel, isModerator,
@@ -74,7 +79,9 @@ export default function Sidebar({ onShowTour }) {
 
   // Pick nav list
   let navItems
-  if (isBDMode) {
+  if (isModerator) {
+    navItems = NAV_MODERATOR
+  } else if (isBDMode) {
     navItems = NAV_BD
   } else if (isCEO || isCOO) {
     navItems = NAV_EXEC
@@ -268,16 +275,4 @@ export default function Sidebar({ onShowTour }) {
           className="btn btn-ghost btn-xs"
           title={'Theme: ' + theme}
         >
-          {theme === 'dark' ? 'Dark' : theme === 'light' ? 'Light' : 'Auto'}
-        </button>
-        <button
-          onClick={signOut}
-          className="btn btn-ghost btn-icon"
-          title={t('auth.signout')}
-        >
-          <LogOut size={14} />
-        </button>
-      </div>
-    </aside>
-  )
-}
+          {theme === 'dark' ? 'Dark' : theme === 'l
