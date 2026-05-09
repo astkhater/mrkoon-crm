@@ -16,6 +16,7 @@ import BDDashboard        from '@/pages/bd/Dashboard'
 import AMDashboard        from '@/pages/am/Dashboard'
 import ExecutiveDashboard from '@/pages/executive/Dashboard'
 import AdminPanel         from '@/pages/admin/AdminPanel'
+import ModeratorDataEntry from '@/pages/moderator/DataEntry'
 
 // Shared pages
 import Pipeline       from '@/pages/shared/Pipeline'
@@ -32,11 +33,12 @@ import Loading        from '@/pages/shared/Loading'
 
 /** Redirect to the right dashboard based on role */
 function RoleHome() {
-  const { isCEO, isCOO, isCCO, isTL, isAM, isBDMode } = useAuth()
-  if ((isCEO || isCOO) && !isBDMode) return <Navigate to="/dashboard/executive" replace />
-  if (isCCO || isTL)                 return <Navigate to="/dashboard/cco"       replace />
-  if (isAM)                          return <Navigate to="/dashboard/am"        replace />
-  return                                    <Navigate to="/dashboard/bd"        replace />
+  const { isCEO, isCOO, isCCO, isTL, isAM, isKSAClevel, isModerator, isBDMode } = useAuth()
+  if ((isCEO || isCOO || isKSAClevel) && !isBDMode) return <Navigate to="/dashboard/executive" replace />
+  if (isCCO || isTL)                                return <Navigate to="/dashboard/cco"       replace />
+  if (isAM)                                         return <Navigate to="/dashboard/am"        replace />
+  if (isModerator)                                  return <Navigate to="/data-entry"           replace />
+  return                                                   <Navigate to="/dashboard/bd"        replace />
 }
 
 /** Block non-admin users */
@@ -91,7 +93,10 @@ export default function App() {
           <Route path="dashboard/am"        element={<AMDashboard />} />
 
           {/* Admin */}
-          <Route path="admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="admin"       element={<AdminRoute><AdminPanel /></AdminRoute>} />
+
+          {/* Moderator */}
+          <Route path="data-entry"  element={<ModeratorDataEntry />} />
 
           {/* Core pages */}
           <Route path="pipeline"  element={<Pipeline />} />
@@ -103,18 +108,4 @@ export default function App() {
           <Route path="ask-ai"    element={<AskAi />} />
           <Route path="ai-setup"  element={<AiSetup />} />
 
-          <Route path="import" element={
-            <ImportRoute><Import /></ImportRoute>
-          } />
-
-          <Route path="*" element={<NotFound />} />
-        </Route>
-
-        {/* Catch-all */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-
-      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
-    </>
-  )
-}
+    
