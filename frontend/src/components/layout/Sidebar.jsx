@@ -275,4 +275,16 @@ export default function Sidebar({ onShowTour }) {
           className="btn btn-ghost btn-xs"
           title={'Theme: ' + theme}
         >
-          {theme === 'dark' ? 'Dark' : theme === 'l
+          {theme === 'dark' ? 'Dark' : theme === 'light' ? 'Light' : 'Auto'}
+        </button>
+        <button
+          onClick={signOut}
+          className="btn btn-ghost btn-icon"
+          title={t('auth.signout')}
+        >
+          <LogOut size={14} />
+        </button>
+      </div>
+    </aside>
+  )
+}
