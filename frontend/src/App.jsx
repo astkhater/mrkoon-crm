@@ -108,4 +108,18 @@ export default function App() {
           <Route path="ask-ai"    element={<AskAi />} />
           <Route path="ai-setup"  element={<AiSetup />} />
 
-    
+          <Route path="import" element={
+            <ImportRoute><Import /></ImportRoute>
+          } />
+
+          <Route path="*" element={<NotFound />} />
+        </Route>
+
+        {/* Catch-all */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+    </>
+  )
+}
