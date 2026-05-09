@@ -79,6 +79,8 @@ export function AuthProvider({ children }) {
   // 'EG' | 'KSA' = filter to that entity
   const entityFilter = (() => {
     if (!profile) return null
+    // CEO/COO in BD mode: always KSA (they work as BD reps in KSA only)
+    if ((isCEO || isCOO) && isBDMode) return 'KSA'
     // CCO/CEO/COO: controlled by the entityView toggle
     if (isCCO || isCEO || isCOO) return entityView === 'holding' ? null : entityView
     // ksa_clevel: can see KSA or all (holding); never scoped to EG
@@ -105,7 +107,4 @@ export function AuthProvider({ children }) {
 }
 
 export function useAuth() {
-  const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used inside AuthProvider')
-  return ctx
-}
+ 
