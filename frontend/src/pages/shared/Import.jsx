@@ -433,4 +433,118 @@ export default function Import() {
                     style={{
                       fontSize: '11px', fontWeight: 600, padding: '2px 10px', borderRadius: '6px',
                       border: `1px solid ${lEntity === e ? 'var(--brand-cyan)' : 'var(--border-default)'}`,
-                      backgro
+                      background: lEntity === e ? 'rgba(34,211,238,0.1)' : 'transparent',
+                      color: lEntity === e ? 'var(--brand-cyan)' : 'var(--text-muted)',
+                      cursor: 'pointer',
+                    }}>
+                    {e}
+                  </button>
+                ))}
+              </div>
+              <DropZone
+                label="LinkedIn Campaign"
+                sublabel="Lead gen form export from LinkedIn Ads"
+                icon={Linkedin}
+                accentColor="var(--brand-cyan)"
+                onFile={handleLinkedInFile}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ── Active zones ── */}
+        <div style={{ display: anyActive ? 'grid' : 'none', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+
+          {/* Mrkoon zone active */}
+          <div>
+            {!mFile && !anyActive && null}
+            {mFile && mParsed && !mResult && (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                  <Database size={14} style={{ color: 'var(--brand-green)' }} />
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mrkoon System</span>
+                </div>
+                <ZonePreview
+                  file={mFile} parsed={mParsed} importing={mImporting}
+                  onImport={() => runImport(mParsed.valid, setMImporting, setMResult)}
+                  onReset={resetMrkoon}
+                  importLabel={`Import ${mParsed.valid.length} lead${mParsed.valid.length !== 1 ? 's' : ''}`}
+                />
+              </div>
+            )}
+            {mResult && <ZoneResult result={mResult} onReset={resetMrkoon} />}
+          </div>
+
+          {/* LinkedIn zone active */}
+          <div>
+            {lFile && lParsed && !lResult && (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                  <Linkedin size={14} style={{ color: 'var(--brand-cyan)' }} />
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>LinkedIn · {lEntity}</span>
+                </div>
+                <ZonePreview
+                  file={lFile} parsed={lParsed} importing={lImporting}
+                  onImport={() => runImport(lParsed.valid, setLImporting, setLResult)}
+                  onReset={resetLinkedIn}
+                  importLabel={`Import ${lParsed.valid.length} lead${lParsed.valid.length !== 1 ? 's' : ''}`}
+                />
+              </div>
+            )}
+            {lResult && <ZoneResult result={lResult} onReset={resetLinkedIn} />}
+          </div>
+
+        </div>
+
+        {/* ── Column references (shown when idle) ── */}
+        {!anyActive && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+
+            <div>
+              <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '8px', paddingBottom: '6px', borderBottom: '1px solid var(--border-default)' }}>
+                Mrkoon Export — Columns
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px' }}>
+                {Object.entries(MRKOON_COLUMN_MAP).map(([canon, aliases]) => (
+                  <div key={canon} style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{canon}</span>
+                    {' '}<span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>({aliases[0]})</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: '10px', fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
+                <strong>Required:</strong> company_name, entity (EG or KSA)
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '8px', paddingBottom: '6px', borderBottom: '1px solid var(--border-default)' }}>
+                LinkedIn Export — Columns
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px' }}>
+                {[
+                  ['first_name',   'First Name'],
+                  ['last_name',    'Last Name'],
+                  ['company',      'Company'],
+                  ['title',        'Job Title'],
+                  ['email',        'Email Address'],
+                  ['phone',        'Phone Number'],
+                  ['entity',       'entity (optional)'],
+                  ['campaign',     '→ notes field'],
+                ].map(([col, hint]) => (
+                  <div key={col} style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{col}</span>
+                    {' '}<span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>({hint})</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: '10px', fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
+                <strong>Required:</strong> company · All leads → new_lead, source=linkedin
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
