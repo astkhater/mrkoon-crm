@@ -280,4 +280,7 @@ export function formatDate(dateStr, lang = 'en') {
   if (!dateStr) return '-'
   const d = new Date(dateStr)
   if (isNaN(d)) return dateStr
-  return d.toLoc
+  return d.toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-GB', {
+    day: 'numeric', month: 'short'
+  })
+}
