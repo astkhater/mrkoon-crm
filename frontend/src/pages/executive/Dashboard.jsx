@@ -37,7 +37,7 @@ function StageBar({ label, count, total, color }) {
 }
 
 export default function ExecutiveDashboard() {
-  const { entityView, isCEO, isCOO, isCCO, profile } = useAuth()
+  const { entityView, isCEO, isCOO, isCCO, isKSAClevel, profile } = useAuth()
   const [data,    setData]    = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -96,16 +96,46 @@ export default function ExecutiveDashboard() {
     : entityView === 'EG' ? 'Egypt Portfolio'
     : 'KSA Portfolio'
 
+  const roleLabel = isCEO ? 'CEO' : isCOO ? 'COO' : isKSAClevel ? 'KSA C-Level' : 'CCO'
+
+  // Personal rep card for ksa_clevel: their own KSA leads
+  const myLeads = isKSAClevel && profile?.id
+    ? leads.filter(l => l.assigned_to === profile.id)
+    : []
+
   return (
     <div className="page-content">
       <div className="page-header">
         <div>
           <h1 className="page-title">{viewTitle}</h1>
           <p className="page-subtitle" style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-            {isCEO ? 'CEO' : isCOO ? 'COO' : 'CCO'} view · {entityView === 'holding' ? 'All entities combined' : entityView + ' entity'}
+            {roleLabel} view · {entityView === 'holding' ? 'All entities combined' : entityView + ' entity'}
+            {isKSAClevel && entityView === 'holding' && <span style={{ color: 'var(--text-muted)', marginLeft: '8px' }}>· read-only</span>}
           </p>
         </div>
       </div>
+
+      {isKSAClevel && myLeads.length > 0 && (
+        <div className="crm-card" style={{ padding: '20px', marginBottom: '24px', border: '1px solid var(--brand-cyan)' }}>
+          <div style={{ fontWeight: 700, marginBottom: '14px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ color: 'var(--brand-cyan)' }}>My Pipeline</span>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 400 }}>Personal leads assigned to you</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '12px' }}>
+            {[
+              { l: 'Total',   v: myLeads.length,                                              c: 'var(--text-primary)' },
+              { l: 'Active',  v: myLeads.filter(l=>ACTIVE_STAGES.includes(l.stage)).length,  c: 'var(--brand-cyan)' },
+              { l: 'Clients', v: myLeads.filter(l=>CLIENT_STAGES.includes(l.stage)).length,  c: '#a78bfa' },
+              { l: 'Lost',    v: myLeads.filter(l=>l.stage==='lost').length,                 c: 'var(--danger)' },
+            ].map(s => (
+              <div key={s.l} style={{ textAlign: 'center', padding: '12px', background: 'var(--bg-elevated)', borderRadius: '8px' }}>
+                <div style={{ fontSize: '22px', fontWeight: 800, color: s.c }}>{s.v}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>{s.l}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {entityView === 'holding' ? (
         /* ── HOLDING VIEW ── */
@@ -180,33 +210,4 @@ export default function ExecutiveDashboard() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             {/* Stage breakdown */}
             <div className="crm-card" style={{ padding: '20px' }}>
-              <div style={{ fontWeight: 700, marginBottom: '16px', color: 'var(--text-primary)' }}>Pipeline by Stage</div>
-              {STAGES.filter(s => (stageCounts[s] ?? 0) > 0).map(s => (
-                <StageBar key={s} label={s} count={stageCounts[s] ?? 0} total={total} color="var(--brand-green)" />
-              ))}
-              {total === 0 && <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>No leads in this entity yet.</div>}
-            </div>
-
-            {/* Rep performance */}
-            <div className="crm-card" style={{ padding: '20px' }}>
-              <div style={{ fontWeight: 700, marginBottom: '16px', color: 'var(--text-primary)' }}>Team Performance</div>
-              {repStats.length === 0 && <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>No reps with leads yet.</div>}
-              {repStats.map(r => (
-                <div key={r.name} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', padding: '10px', background: 'var(--bg-elevated)', borderRadius: '8px' }}>
-                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--brand-green)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, color: '#fff', flexShrink: 0 }}>
-                    {r.name[0]}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', truncate: true }}>{r.name}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{r.total} leads · {r.active} active · {r.clients} clients</div>
-                  </div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--brand-cyan)' }}>{r.active}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
+              <div style={
