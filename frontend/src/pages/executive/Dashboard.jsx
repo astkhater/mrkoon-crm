@@ -37,18 +37,18 @@ function StageBar({ label, count, total, color }) {
 }
 
 export default function ExecutiveDashboard() {
-  const { entityView, isCEO, isCOO, isCCO, isKSAClevel, profile } = useAuth()
+  const { entityView, entityFilter, isCEO, isCOO, isCCO, isKSAClevel, profile } = useAuth()
   const [data,    setData]    = useState(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => { loadData() }, [entityView])
+  useEffect(() => { loadData() }, [entityFilter])
 
   async function loadData() {
     setLoading(true)
     try {
-      // Base query — filter by entity unless holding
+      // Base query — use entityFilter (handles ksa_clevel EG→KSA translation)
       let q = supabase.from('leads').select('stage, entity, assigned_to')
-      if (entityView !== 'holding') q = q.eq('entity', entityView)
+      if (entityFilter) q = q.eq('entity', entityFilter)
       const { data: leads } = await q
       const { data: profiles } = await supabase.from('profiles').select('id,full_name,role')
       setData({ leads: leads ?? [], profiles: profiles ?? [] })
