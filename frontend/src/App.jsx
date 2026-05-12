@@ -28,6 +28,7 @@ import Settings       from '@/pages/shared/Settings'
 import Import         from '@/pages/shared/Import'
 import AiSetup        from '@/pages/shared/AiSetup'
 import AskAi          from '@/pages/shared/AskAi'
+import MergePage      from '@/pages/shared/MergePage'
 import NotFound       from '@/pages/shared/NotFound'
 import Loading        from '@/pages/shared/Loading'
 
@@ -108,6 +109,7 @@ export default function App() {
           <Route path="ask-ai"    element={<AskAi />} />
           <Route path="ai-setup"  element={<AiSetup />} />
 
+          <Route path="merge"  element={<MergePage />} />
           <Route path="import" element={
             <ImportRoute><Import /></ImportRoute>
           } />
