@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useApp }  from '@/contexts/AppContext'
 import { Shield, Users, Eye, Plug, RefreshCw, Check, ClipboardList, Play } from 'lucide-react'
 
-const ROLE_OPTIONS = ['cco','ceo','coo','bd_tl','bd_rep','bd_am']
+const ROLE_OPTIONS = ['cco','ceo','coo','ksa_clevel','bd_tl','bd_rep','bd_am','moderator']
 const ROLE_LABELS  = {
   cco:'CCO', ceo:'CEO', coo:'COO',
   bd_tl:'BD Team Lead', bd_rep:'BD Rep', bd_am:'Account Manager',
