@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import {
   LayoutDashboard, Users, TrendingUp, Briefcase,
   Calendar, RefreshCw, Upload, Settings, Sparkles, LogOut,
-  ShieldCheck, HelpCircle, Briefcase as BriefcaseIcon, X, ClipboardList
+  ShieldCheck, HelpCircle, Briefcase as BriefcaseIcon, X, ClipboardList, GitMerge
 } from 'lucide-react'
 import { useAuth }   from '@/contexts/AuthContext'
 import { useApp }    from '@/contexts/AppContext'
@@ -16,6 +16,7 @@ const NAV_EXEC = [
   { key: 'nav.leads',     icon: Users,           href: '/leads' },
   { key: 'nav.accounts',  icon: Briefcase,       href: '/accounts' },
   { key: 'nav.reconnect', icon: RefreshCw,       href: '/reconnect' },
+  { key: 'nav.merge',     icon: GitMerge,        href: '/merge' },
   { key: 'nav.calendar',  icon: Calendar,        href: '/calendar' },
   { key: 'nav.import',    icon: Upload,          href: '/import', importOnly: true },
   { key: 'nav.settings',  icon: Settings,        href: '/settings' },
@@ -28,6 +29,7 @@ const NAV_MANAGER = [
   { key: 'nav.accounts',  icon: Briefcase,       href: '/accounts' },
   { key: 'nav.reconnect', icon: RefreshCw,       href: '/reconnect' },
   { key: 'nav.calendar',  icon: Calendar,        href: '/calendar' },
+  { key: 'nav.merge',     icon: GitMerge,        href: '/merge' },
   { key: 'nav.import',    icon: Upload,          href: '/import', importOnly: true },
   { key: 'nav.settings',  icon: Settings,        href: '/settings' },
 ]
@@ -38,6 +40,7 @@ const NAV_BD = [
   { key: 'nav.leads',     icon: Users,           href: '/leads' },
   { key: 'nav.reconnect', icon: RefreshCw,       href: '/reconnect' },
   { key: 'nav.calendar',  icon: Calendar,        href: '/calendar' },
+  { key: 'nav.merge',     icon: GitMerge,        href: '/merge' },
   { key: 'nav.settings',  icon: Settings,        href: '/settings' },
 ]
 
@@ -46,6 +49,7 @@ const NAV_AM = [
   { key: 'nav.accounts',  icon: Briefcase,       href: '/accounts' },
   { key: 'nav.reconnect', icon: RefreshCw,       href: '/reconnect' },
   { key: 'nav.calendar',  icon: Calendar,        href: '/calendar' },
+  { key: 'nav.merge',     icon: GitMerge,        href: '/merge' },
   { key: 'nav.leads',     icon: Users,           href: '/leads' },
   { key: 'nav.settings',  icon: Settings,        href: '/settings' },
 ]
