@@ -16,6 +16,7 @@ export const translations = {
     'nav.settings':     'Settings',
     'nav.ai':           'Ask AI',
     'nav.data_entry':   'Data Entry',
+    'nav.merge':        'Merge Leads',
 
     // Auth
     'auth.signin':      'Sign In',
@@ -146,6 +147,7 @@ export const translations = {
     'nav.settings':     'الاعدادات',
     'nav.ai':           'اسأل الذكاء الاصطناعي',
     'nav.data_entry':   'إدخال البيانات',
+    'nav.merge':        'دمج العملاء',
 
     // Auth
     'auth.signin':      'تسجيل الدخول',
