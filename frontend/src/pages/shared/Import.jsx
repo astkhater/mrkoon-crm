@@ -48,6 +48,25 @@ const LINKEDIN_COLUMN_MAP = {
   notes:          ['campaign', 'campaign_name', 'campaign name', 'lead_gen_form_name', 'lead gen form name', 'form name', 'notes'],
 }
 
+// ── Company name normalization ────────────────────────────────
+/** Cleans a company name for storage: trim + collapse spaces */
+function cleanCompany(name) {
+  if (!name) return name
+  return String(name).trim().replace(/\s+/g, ' ')
+}
+
+/** Normalizes a company name for fuzzy duplicate comparison:
+ *  lowercase, remove punctuation, collapse spaces.
+ *  Works for both Arabic and English. */
+function normalizeForCompare(name) {
+  if (!name) return ''
+  return String(name)
+    .toLowerCase()
+    .trim()
+    .replace(/[.,،؛;:\-_'"()]/g, '')   // strip punctuation
+    .replace(/\s+/g, ' ')
+}
+
 // ── CSV parser ────────────────────────────────────────────────
 function parseCSV(text) {
   const lines = text.split(/\r?\n/).filter(l => l.trim())
@@ -97,6 +116,7 @@ function transformMrkoonRow(raw, headerMap, userId) {
     if (canon) row[canon] = val === '' ? null : val
   }
   const errors = []
+  if (row.company_name) row.company_name = cleanCompany(row.company_name)
   if (!row.company_name) errors.push('Missing company_name')
   if (!row.entity)       errors.push('Missing entity')
   else if (!VALID_ENTITIES.includes(row.entity.toUpperCase())) errors.push(`Invalid entity "${row.entity}"`)
@@ -137,7 +157,7 @@ function transformLinkedInRow(raw, headerMap, userId, defaultEntity) {
   if (!VALID_ENTITIES.includes(entity)) errors.push(`Invalid entity "${entity}" — set a default or add entity column`)
 
   const row = {
-    company_name:   mapped.company_name,
+    company_name:   cleanCompany(mapped.company_name),
     contact_name:   name || null,
     contact_title:  mapped.contact_title  ?? null,
     email:          mapped.email          ?? null,
@@ -376,11 +396,11 @@ export default function Import() {
   async function runImport(rows, setImporting, setResult) {
     setImporting(true)
     try {
-      const { data: existing } = await supabase.from('leads').select('company_name, entity').eq('assigned_to', userId)
-      const existingSet = new Set((existing ?? []).map(r => `${r.company_name}||${r.entity}`))
+      const { data: existing } = await supabase.from('leads').select('company_name, entity')
+      const existingSet = new Set((existing ?? []).map(r => `${normalizeForCompare(r.company_name)}||${r.entity}`))
       const toInsert = [], duplicates = []
       for (const row of rows) {
-        const key = `${row.company_name}||${row.entity}`
+        const key = `${normalizeForCompare(row.company_name)}||${row.entity}`
         if (existingSet.has(key)) duplicates.push(row.company_name)
         else toInsert.push(row)
       }
@@ -529,22 +549,4 @@ export default function Import() {
                   ['title',        'Job Title'],
                   ['email',        'Email Address'],
                   ['phone',        'Phone Number'],
-                  ['entity',       'entity (optional)'],
-                  ['campaign',     '→ notes field'],
-                ].map(([col, hint]) => (
-                  <div key={col} style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                    <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{col}</span>
-                    {' '}<span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>({hint})</span>
-                  </div>
-                ))}
-              </div>
-              <div style={{ marginTop: '10px', fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
-                <strong>Required:</strong> company · All leads → new_lead, source=linkedin
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
+                  ['entity',       'entity (optio
