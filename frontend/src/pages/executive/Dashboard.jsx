@@ -109,8 +109,8 @@ export default function ExecutiveDashboard() {
         <div>
           <h1 className="page-title">{viewTitle}</h1>
           <p className="page-subtitle" style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-            {roleLabel} view · {entityView === 'holding' ? 'All entities combined' : entityView + ' entity'}
-            {isKSAClevel && entityView === 'holding' && <span style={{ color: 'var(--text-muted)', marginLeft: '8px' }}>· read-only</span>}
+            {roleLabel} view · {entityFilter === null ? 'All entities combined' : entityFilter + ' entity'}
+            {isKSAClevel && entityFilter === null && <span style={{ color: 'var(--text-muted)', marginLeft: '8px' }}>· read-only</span>}
           </p>
         </div>
       </div>
@@ -240,3 +240,4 @@ export default function ExecutiveDashboard() {
     </div>
   )
 }
+    
