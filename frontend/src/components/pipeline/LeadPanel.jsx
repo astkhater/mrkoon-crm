@@ -65,6 +65,7 @@ function useActivities(leadId) {
         .from('activities')
         .select('*, profiles!activities_performed_by_fkey(full_name)')
         .eq('lead_id', leadId)
+        .order('activity_date', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false })
         .limit(25)
       if (error) throw error
@@ -118,7 +119,7 @@ function ActivityItem({ activity, lang }) {
         )}
         {/* Meta */}
         <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>
-          {activity.profiles?.full_name} · {formatDate(activity.created_at, lang)}
+          {activity.profiles?.full_name ?? activity.rep_name} · {formatDate(activity.activity_date ?? activity.created_at, lang)}{activity.source && activity.source !== 'manual' && <span style={{ marginLeft: '6px', fontSize: '9px', padding: '1px 4px', borderRadius: '3px', background: 'rgba(148,163,184,0.15)', color: 'var(--text-muted)' }}>{activity.source}</span>}
         </div>
       </div>
     </div>
