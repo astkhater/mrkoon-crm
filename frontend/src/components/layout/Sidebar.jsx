@@ -83,9 +83,9 @@ export default function Sidebar({ onShowTour }) {
     navItems = NAV_MODERATOR
   } else if (isBDMode) {
     navItems = NAV_BD
-  } else if (isCEO || isCOO) {
+  } else if (isCEO || isCOO || isKSAClevel) {
     navItems = NAV_EXEC
-  } else if (isCCO || isTL || isKSAClevel) {
+  } else if (isCCO || isTL) {
     navItems = NAV_MANAGER
   } else if (isAM) {
     navItems = NAV_AM
