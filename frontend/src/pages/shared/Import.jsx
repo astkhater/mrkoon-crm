@@ -549,4 +549,22 @@ export default function Import() {
                   ['title',        'Job Title'],
                   ['email',        'Email Address'],
                   ['phone',        'Phone Number'],
-                  ['entity',       'entity (optio
+                  ['entity',       'entity (optional)'],
+                  ['campaign',     '→ notes field'],
+                ].map(([col, hint]) => (
+                  <div key={col} style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{col}</span>
+                    {' '}<span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>({hint})</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: '10px', fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
+                <strong>Required:</strong> company · All leads → new_lead, source=linkedin
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
