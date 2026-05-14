@@ -27,7 +27,7 @@ const SOURCES = [
   'platform_app', 'exhibition', 'linkedin', 'facebook_instagram',
 ]
 
-const STACE_COLORS = {
+const STAGE_COLORS = {
   new_lead: '#64748b', reaching_out: '#3b82f6', no_response: '#6366f1',
   meeting_done: '#8b5cf6', negotiation: '#f59e0b',
   prospect_active: '#22c55e', prospect_cold: '#94a3b8',
