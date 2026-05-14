@@ -118,7 +118,7 @@ function HistoryCard({ title, items, color, note }) {
   )
 }
 
-function CompareView({ leadA, leadB, historyA, historyB, choices, setChoices, onMerge, onBack, merging, swapAB }) {
+function CompareView({ leadA, leadB, historyA, historyB, choices, setChoices, onMerge, onBack, onSkip, merging, swapAB }) {
   const diffFields = FIELDS.filter(f =>
     norm(fmt(leadA[f.key]) ?? '') !== norm(fmt(leadB[f.key]) ?? '') &&
     (leadA[f.key] != null || leadB[f.key] != null)
@@ -137,6 +137,11 @@ function CompareView({ leadA, leadB, historyA, historyB, choices, setChoices, on
         <button className="btn btn-ghost btn-sm" onClick={onBack}>← Back</button>
         <button className="btn btn-ghost btn-sm" onClick={swapAB} title="Swap A and B">⇄ Swap A/B</button>
         <div style={{ flex: 1 }} />
+        {onSkip && (
+          <button className="btn btn-ghost btn-sm" onClick={onSkip} style={{ color: 'var(--text-muted)' }}>
+            Not duplicates — keep both
+          </button>
+        )}
         <button className="btn btn-primary btn-md" onClick={onMerge} disabled={merging}>
           <GitMerge size={14} />
           {merging ? 'Merging...' : 'Confirm Merge'}
@@ -258,7 +263,9 @@ export default function MergePage() {
   const { entityFilter } = useAuth()
   const { toast }        = useApp()
 
-  const [tab,      setTab]      = useState('detect')
+  const [tab,        setTab]        = useState('detect')
+  const [expanded,   setExpanded]   = useState({})
+  const [dismissed,  setDismissed]  = useState({})
   const [allLeads, setAllLeads] = useState([])
   const [loading,  setLoading]  = useState(true)
 
@@ -384,6 +391,7 @@ export default function MergePage() {
         historyA={historyA} historyB={historyB}
         choices={choices} setChoices={setChoices}
         onMerge={executeMerge} onBack={reset}
+        onSkip={reset}
         merging={merging}
         swapAB={() => { setLeadA(leadB); setLeadB(leadA) }}
       />
@@ -443,44 +451,71 @@ export default function MergePage() {
             <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>All company names in this entity look unique.</div>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {dupGroups.map((group, gi) => (
-              <div key={gi} className="crm-card" style={{ padding: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                  <AlertTriangle size={14} style={{ color: 'var(--warning)' }} />
-                  <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
-                    {group[0].company_name} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>· {group[0].entity}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {dupGroups.filter((_,gi) => !dismissed[gi]).map((group, gi) => (
+              <div key={gi} className="crm-card">
+                {/* Group header */}
+                <div
+                  onClick={() => setExpanded(e => ({ ...e, [gi]: !e[gi] }))}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                    padding: '12px 16px', cursor: 'pointer',
+                    borderBottom: expanded[gi] ? '1px solid var(--border)' : 'none',
+                  }}
+                >
+                  <AlertTriangle size={13} style={{ color: 'var(--warning)', flexShrink: 0 }} />
+                  <span style={{ fontWeight: 700, color: 'var(--text-primary)', flex: 1 }}>
+                    {group[0].company_name}
+                    <span style={{ color: 'var(--text-muted)', fontWeight: 400, marginLeft: '6px' }}>· {group[0].entity}</span>
                   </span>
                   <span className="badge" style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171', fontSize: '10px' }}>
-                    {group.length} variants
+                    {group.length} entries
                   </span>
+                  <button
+                    onClick={e => { e.stopPropagation(); setDismissed(d => ({ ...d, [gi]: true })) }}
+                    className="btn btn-ghost btn-icon"
+                    title="Dismiss — not duplicates"
+                    style={{ padding: '2px', opacity: 0.5 }}
+                  >
+                    <X size={13} />
+                  </button>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{expanded[gi] ? '▲' : '▼'}</span>
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {group.flatMap((lead, i) =>
-                    group.slice(i + 1).map(other => (
-                      <button
-                        key={`${lead.id}-${other.id}`}
-                        onClick={() => startCompare(lead, other)}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: '6px',
-                          padding: '6px 12px', borderRadius: '6px',
-                          border: '1px solid var(--border)',
-                          background: 'var(--bg-elevated)',
-                          cursor: 'pointer', fontSize: '12px', color: 'var(--text-primary)',
-                        }}
-                      >
-                        <span style={{ maxWidth: '130px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {lead.company_name}
-                        </span>
-                        <ArrowRight size={11} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-                        <span style={{ maxWidth: '130px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {other.company_name}
-                        </span>
-                        <GitMerge size={11} style={{ color: 'var(--brand-cyan)', flexShrink: 0 }} />
-                      </button>
-                    ))
-                  )}
-                </div>
+
+                {/* Expanded: list each lead, pick two to compare */}
+                {expanded[gi] && (
+                  <div>
+                    {group.map((lead, li) => (
+                      <div key={lead.id} style={{
+                        display: 'flex', alignItems: 'center', gap: '12px',
+                        padding: '10px 16px',
+                        borderBottom: li < group.length - 1 ? '1px solid var(--border-subtle)' : 'none',
+                      }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 600 }}>{lead.company_name}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                            {lead.stage?.replace(/_/g, ' ')} · {lead.contact_name ?? '—'} · {lead.profiles?.full_name ?? 'unassigned'}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                          {group.filter(o => o.id !== lead.id).map(other => (
+                            <button
+                              key={other.id}
+                              onClick={() => startCompare(lead, other)}
+                              className="btn btn-ghost btn-xs"
+                              style={{ fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            >
+                              Compare <ArrowRight size={10} />
+                              <span style={{ maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--brand-cyan)' }}>
+                                {other.stage?.replace(/_/g, ' ')}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
