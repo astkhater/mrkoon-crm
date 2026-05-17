@@ -23,13 +23,14 @@ const FIELDS = [
   { key: 'company_name',        label: 'Company Name' },
   { key: 'stage',               label: 'Stage' },
   { key: 'lead_source',         label: 'Source' },
-  { key: 'contact_name',        label: 'Contact Name' },
-  { key: 'contact_title',       label: 'Job Title' },
-  { key: 'phone',               label: 'Phone' },
+  { key: 'contact_name',        label: 'Contact Name',   mergeable: true },
+  { key: 'contact_title',       label: 'Job Title',      mergeable: true },
+  { key: 'phone',               label: 'Phone',          mergeable: true },
+  { key: 'email',               label: 'Email',          mergeable: true },
   { key: 'estimated_gmv_month', label: 'GMV / Mo' },
   { key: 'deal_success_rate',   label: 'Success Rate %' },
   { key: 'deal_value',          label: 'Deal Value' },
-  { key: 'next_action',         label: 'Next Action' },
+  { key: 'next_action',         label: 'Next Action',    mergeable: true },
   { key: 'next_action_date',    label: 'Action Date' },
 ]
 
@@ -179,40 +180,62 @@ function CompareView({ leadA, leadB, historyA, historyB, choices, setChoices, on
           }}>
             <AlertTriangle size={13} /> Conflicting fields — click a value to keep it
           </div>
-          {diffFields.map(f => (
-            <div key={f.key} style={{ display: 'grid', gridTemplateColumns: '160px 1fr 1fr', borderBottom: '1px solid var(--border-subtle)' }}>
-              <div style={{ padding: '10px 16px', fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
-                {f.label}
-              </div>
-              {['a', 'b'].map(side => {
-                const val = (side === 'a' ? leadA : leadB)[f.key]
-                const chosen = choices[f.key] === side
-                return (
+          {diffFields.map(f => {
+            const valA = leadA[f.key]
+            const valB = leadB[f.key]
+            const choice = choices[f.key]
+            const bothVal = [valA, valB].filter(Boolean).join(' · ')
+            return (
+              <div key={f.key} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr 1fr', minHeight: '44px' }}>
+                  <div style={{ padding: '10px 16px', fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
+                    {f.label}
+                  </div>
+                  {['a', 'b'].map(side => {
+                    const val = (side === 'a' ? valA : valB)
+                    const chosen = choice === side
+                    return (
+                      <div
+                        key={side}
+                        onClick={() => setChoices(c => ({ ...c, [f.key]: side }))}
+                        style={{
+                          padding: '10px 16px', cursor: 'pointer',
+                          background: chosen ? (side === 'a' ? 'rgba(34,211,238,0.08)' : 'rgba(34,197,94,0.08)') : 'transparent',
+                          borderLeft: chosen ? `2px solid ${side === 'a' ? 'var(--brand-cyan)' : 'var(--brand-green)'}` : '2px solid transparent',
+                          display: 'flex', alignItems: 'center', gap: '8px',
+                          fontSize: '13px', transition: 'background 0.15s',
+                        }}
+                      >
+                        {chosen && <Check size={12} style={{ color: side === 'a' ? 'var(--brand-cyan)' : 'var(--brand-green)', flexShrink: 0 }} />}
+                        {val != null && val !== ''
+                          ? <span style={{ color: 'var(--text-primary)' }}>{String(val)}</span>
+                          : <em style={{ color: 'var(--text-muted)', opacity: 0.5 }}>empty</em>}
+                      </div>
+                    )
+                  })}
+                </div>
+                {/* "Keep both" row for mergeable fields */}
+                {f.mergeable && valA && valB && (
                   <div
-                    key={side}
-                    onClick={() => setChoices(c => ({ ...c, [f.key]: side }))}
+                    onClick={() => setChoices(c => ({ ...c, [f.key]: 'both' }))}
                     style={{
-                      padding: '10px 16px', cursor: 'pointer',
-                      background: chosen
-                        ? (side === 'a' ? 'rgba(34,211,238,0.08)' : 'rgba(34,197,94,0.08)')
-                        : 'transparent',
-                      borderLeft: chosen
-                        ? `2px solid ${side === 'a' ? 'var(--brand-cyan)' : 'var(--brand-green)'}`
-                        : '2px solid transparent',
+                      padding: '7px 16px 7px 176px', cursor: 'pointer',
+                      background: choice === 'both' ? 'rgba(168,85,247,0.08)' : 'var(--bg-elevated)',
+                      borderTop: '1px solid var(--border-subtle)',
                       display: 'flex', alignItems: 'center', gap: '8px',
-                      fontSize: '13px', transition: 'background 0.15s',
+                      fontSize: '12px', transition: 'background 0.15s',
                     }}
                   >
-                    {chosen && <Check size={12} style={{ color: side === 'a' ? 'var(--brand-cyan)' : 'var(--brand-green)', flexShrink: 0 }} />}
-                    {val != null && val !== ''
-                      ? <span style={{ color: 'var(--text-primary)' }}>{String(val)}</span>
-                      : <em style={{ color: 'var(--text-muted)', opacity: 0.5 }}>empty</em>
-                    }
+                    {choice === 'both'
+                      ? <Check size={11} style={{ color: '#c084fc', flexShrink: 0 }} />
+                      : <span style={{ width: 11, flexShrink: 0 }} />}
+                    <span style={{ color: '#c084fc', fontWeight: 600, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.06em', flexShrink: 0 }}>Keep both →</span>
+                    <span style={{ color: 'var(--text-secondary)' }}>{bothVal}</span>
                   </div>
-                )
-              })}
-            </div>
-          ))}
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
 
@@ -357,7 +380,12 @@ export default function MergePage() {
     // Build merged data from choices
     const mergedData = {}
     for (const f of FIELDS) {
-      mergedData[f.key] = (choices[f.key] === 'b' ? leadB : leadA)[f.key] ?? null
+      if (choices[f.key] === 'both') {
+        const a = leadA[f.key], b = leadB[f.key]
+        mergedData[f.key] = [a, b].filter(Boolean).join(' · ')
+      } else {
+        mergedData[f.key] = (choices[f.key] === 'b' ? leadB : leadA)[f.key] ?? null
+      }
     }
 
     try {
