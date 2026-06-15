@@ -1,17 +1,34 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useApp }  from '@/contexts/AppContext'
 
+function friendlyAuthError(raw) {
+  const msg = (raw || '').toLowerCase()
+  if (msg.includes('invalid login credentials') || msg.includes('invalid_credentials'))
+    return 'Incorrect email or password.'
+  if (msg.includes('email not confirmed'))
+    return 'Please verify your email address before signing in.'
+  if (msg.includes('too many requests') || msg.includes('rate limit'))
+    return 'Too many attempts — please wait a few minutes and try again.'
+  if (msg.includes('user not found'))
+    return 'No account found with this email.'
+  if (msg.includes('network') || msg.includes('fetch'))
+    return 'Network error — check your connection and try again.'
+  return raw || 'Sign in failed. Please try again.'
+}
+
 export default function Login() {
-  const { signIn, resetPassword } = useAuth()
-  const { t, lang, setLang }      = useApp()
-  const navigate                  = useNavigate()
-  const [email, setEmail]         = useState('')
-  const [pass,  setPass]          = useState('')
-  const [busy,  setBusy]          = useState(false)
-  const [err,   setErr]           = useState('')
-  const [mode,  setMode]          = useState('login')
+  const { signIn, resetPassword }  = useAuth()
+  const { t, lang, setLang }       = useApp()
+  const navigate                   = useNavigate()
+  const [searchParams]             = useSearchParams()
+  const didReset                   = searchParams.get('reset') === 'done'
+  const [email, setEmail]          = useState('')
+  const [pass,  setPass]           = useState('')
+  const [busy,  setBusy]           = useState(false)
+  const [err,   setErr]            = useState('')
+  const [mode,  setMode]           = useState('login')
   const [resetEmail, setResetEmail] = useState('')
 
   async function handleSubmit(e) {
@@ -22,7 +39,7 @@ export default function Login() {
       await signIn(email, pass)
       navigate('/', { replace: true })
     } catch (e) {
-      setErr(e.message || 'Invalid credentials')
+      setErr(friendlyAuthError(e.message))
     } finally {
       setBusy(false)
     }
@@ -36,7 +53,7 @@ export default function Login() {
       await resetPassword(resetEmail)
       setMode('sent')
     } catch (e) {
-      setErr(e.message || 'Failed to send reset email')
+      setErr(friendlyAuthError(e.message))
     } finally {
       setBusy(false)
     }
@@ -72,6 +89,16 @@ export default function Login() {
         {logoBlock}
 
         <div className="crm-card" style={{ padding: '28px' }}>
+
+          {didReset && (
+            <div style={{
+              padding: '10px 14px', borderRadius: '8px', marginBottom: '16px',
+              background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)',
+              color: '#22c55e', fontSize: '13px',
+            }}>
+              Password updated — sign in with your new password.
+            </div>
+          )}
 
           {mode === 'login' && (
             <form onSubmit={handleSubmit}>
@@ -193,8 +220,11 @@ export default function Login() {
               <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}>
                 Check your email
               </div>
-              <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '24px' }}>
+              <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
                 A password reset link was sent to <strong>{resetEmail}</strong>
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '24px' }}>
+                Didn't receive it? Check your spam folder — it sometimes lands there.
               </div>
               <button
                 type="button"
