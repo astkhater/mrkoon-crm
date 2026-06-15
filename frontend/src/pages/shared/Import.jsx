@@ -457,7 +457,7 @@ export default function Import() {
     if (created > 0 || updated > 0) {
       queryClient.invalidateQueries({ queryKey: ['leads'] })
       queryClient.invalidateQueries({ queryKey: ['accounts'] })
-      toast({ type: 'success', message: `${created} created · ${updated} updated` })
+      toast(`${created} created · ${updated} updated`, 'success')
     }
     setImporting(false)
     setWizStage('done')
