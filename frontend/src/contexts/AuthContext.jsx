@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase'
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [session,    setSession]    = useState(undefined)
+  const [session,    setSession]    = useState(null)
   const [profile,    setProfile]    = useState(null)
   const [loading,    setLoading]    = useState(true)
   const [viewMode,   setViewModeState]   = useState(() => localStorage.getItem('crm_view_mode')   || 'dashboard')
