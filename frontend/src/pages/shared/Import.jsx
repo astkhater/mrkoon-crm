@@ -1,569 +1,798 @@
 /**
- * Import — dual-zone CSV import
- * Zone 1: Mrkoon System daily export (full lead schema)
- * Zone 2: LinkedIn campaign leads export
+ * Import — Smart multi-source import with cross-reference deduplication
+ * Supports: CSV, Excel (.xlsx/.xls) with multiple sheets
+ * Cross-references: phone (normalized), company name (fuzzy bigram), contact name
+ * Modes: Total (single file) | By BD Rep (each sheet = one rep)
  */
-import { useState, useRef, useCallback } from 'react'
-import { useQueryClient }                from '@tanstack/react-query'
-import { Upload, AlertTriangle, CheckCircle2, X, FileText, Linkedin, Database } from 'lucide-react'
-import { supabase }  from '@/lib/supabase'
-import { useAuth }   from '@/contexts/AuthContext'
-import { useApp }    from '@/contexts/AppContext'
-import TopBar        from '@/components/layout/TopBar'
+import { useState, useRef, useEffect } from 'react'
+import { useQueryClient }              from '@tanstack/react-query'
+import {
+  Upload, RefreshCw, CheckCircle2, X, FileText,
+  AlertTriangle, Users, Building, Phone, User,
+} from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+import { useAuth }  from '@/contexts/AuthContext'
+import { useApp }   from '@/contexts/AppContext'
+import TopBar       from '@/components/layout/TopBar'
 
-// ── Constants ─────────────────────────────────────────────────
+// ── Constants ──────────────────────────────────────────────────
 const VALID_STAGES = [
-  'new_lead','reaching_out','no_response','meeting_done',
-  'negotiation','prospect_active','prospect_cold',
-  'reconnect','client_active','client_inactive',
-  'client_renewal','lost','unqualified',
+  'new_lead','reaching_out','no_response','meeting_done','negotiation',
+  'prospect_active','prospect_cold','reconnect','client_active',
+  'client_inactive','client_renewal','lost','unqualified',
 ]
 const VALID_ENTITIES = ['EG', 'KSA']
 
-const MRKOON_COLUMN_MAP = {
-  company_name:        ['company_name', 'company', 'name', 'account'],
-  entity:              ['entity', 'market', 'country', 'region'],
-  contact_name:        ['contact_name', 'contact', 'person', 'full_name'],
-  contact_title:       ['contact_title', 'title', 'position', 'job_title'],
-  phone:               ['phone', 'mobile', 'tel', 'telephone'],
-  email:               ['email', 'e-mail', 'mail'],
-  stage:               ['stage', 'status', 'pipeline_stage'],
-  estimated_gmv_month: ['estimated_gmv_month', 'gmv', 'gmv_month', 'monthly_gmv', 'value'],
-  next_action:         ['next_action', 'action', 'task', 'todo'],
-  next_action_date:    ['next_action_date', 'due_date', 'action_date', 'follow_up_date'],
-  notes:               ['notes', 'note', 'comments', 'comment'],
-  source:              ['source', 'lead_source', 'origin'],
-  date_added:          ['date_added', 'added', 'created_at', 'date'],
+// Universal column aliases → CRM field (Arabic + English + common typos)
+const COLUMN_ALIASES = {
+  company_name:        ['company_name','company','account','client','client_name','account_name',
+                        'عميل','اسم العميل','شركة','اسم الشركة','organization','org','business'],
+  entity:              ['entity','market','country','region','market_entity','territory'],
+  contact_name:        ['contact_name','contact','person','full_name','client_contact',
+                        'مسؤول','اسم المسؤول','contact_person','contact person','rep_contact'],
+  contact_title:       ['contact_title','title','position','job_title','role','designation',
+                        'المسمى','وظيفة','job title'],
+  phone:               ['phone','mobile','tel','telephone','phone_number','mobile_number','cell',
+                        'رقم','جوال','موبايل','رقم الهاتف','رقم الجوال','phone number','mobile number'],
+  email:               ['email','e-mail','mail','email_address','work_email','البريد','ايميل','email address'],
+  stage:               ['stage','status','pipeline_stage','phase','المرحلة','الحالة','pipeline stage'],
+  lead_source:         ['source','lead_source','origin','channel','المصدر','how_found','lead source'],
+  estimated_gmv_month: ['estimated_gmv_month','gmv','gmv_month','monthly_gmv','value',
+                        'potential','estimated_value','القيمة','monthly value','expected gmv'],
+  deal_value:          ['deal_value','deal','contract_value','قيمة الصفقة','deal value','contract value'],
+  next_action:         ['next_action','action','task','todo','follow_up','الخطوة التالية','المهمة','next step','follow up'],
+  next_action_date:    ['next_action_date','due_date','action_date','follow_up_date','follow_up date',
+                        'تاريخ المتابعة','next_date','followup_date','due date'],
+  notes:               ['notes','note','comments','comment','remarks','ملاحظات','ملاحظة','memo','description'],
+  date_added:          ['date_added','added','created_at','date','created','تاريخ الإضافة','entry_date','date added'],
 }
 
-// LinkedIn export column aliases
-const LINKEDIN_COLUMN_MAP = {
-  _first_name:    ['first_name', 'firstname', 'first name'],
-  _last_name:     ['last_name', 'lastname', 'last name'],
-  company_name:   ['company', 'company name', 'organization', 'company_name'],
-  contact_title:  ['title', 'job title', 'jobtitle', 'position'],
-  email:          ['email', 'email address', 'emailaddress', 'work email'],
-  phone:          ['phone', 'mobile', 'phone number', 'phonenumber'],
-  entity:         ['entity', 'market', 'country', 'region'],
-  notes:          ['campaign', 'campaign_name', 'campaign name', 'lead_gen_form_name', 'lead gen form name', 'form name', 'notes'],
+// ── Utility functions ──────────────────────────────────────────
+
+function today() { return new Date().toISOString().slice(0, 10) }
+
+/** Normalize phone to digits only, strip country code */
+function normalizePhone(p) {
+  if (!p) return null
+  let d = String(p).replace(/\D/g, '')
+  if (d.startsWith('20') && d.length === 12) d = '0' + d.slice(2)   // +20 Egypt
+  if (d.startsWith('966') && d.length >= 12) d = '0' + d.slice(3)   // +966 KSA
+  if (d.startsWith('00') && d.length > 10)   d = '0' + d.slice(2)   // 00XX intl
+  return d.length >= 9 ? d : null
 }
 
-// ── Company name normalization ────────────────────────────────
-/** Cleans a company name for storage: trim + collapse spaces */
-function cleanCompany(name) {
-  if (!name) return name
-  return String(name).trim().replace(/\s+/g, ' ')
+/** Normalize text for fuzzy comparison: lowercase, strip noise words */
+function normalizeText(s) {
+  if (!s) return ''
+  return String(s)
+    .toLowerCase().trim()
+    .replace(/[.,،؛;:\-_'"()​ ]/g, '')
+    .replace(/\b(co|ltd|llc|inc|corp|group|grp|شركة|مؤسسة|مجموعة|holding|investments|int'l|international)\b/gi, '')
+    .replace(/\s+/g, ' ').trim()
 }
 
-/** Normalizes a company name for fuzzy duplicate comparison:
- *  lowercase, remove punctuation, collapse spaces.
- *  Works for both Arabic and English. */
-function normalizeForCompare(name) {
-  if (!name) return ''
-  return String(name)
-    .toLowerCase()
-    .trim()
-    .replace(/[.,،؛;:\-_'"()]/g, '')   // strip punctuation
-    .replace(/\s+/g, ' ')
-}
-
-// ── CSV parser ────────────────────────────────────────────────
-function parseCSV(text) {
-  const lines = text.split(/\r?\n/).filter(l => l.trim())
-  if (lines.length < 2) return { headers: [], rows: [] }
-
-  function parseLine(line) {
-    const fields = []
-    let cur = '', inQ = false
-    for (let i = 0; i < line.length; i++) {
-      const c = line[i]
-      if (c === '"') {
-        if (inQ && line[i + 1] === '"') { cur += '"'; i++ }
-        else inQ = !inQ
-      } else if (c === ',' && !inQ) { fields.push(cur.trim()); cur = '' }
-      else cur += c
+/** Bigram similarity — works for Arabic and English */
+function similarity(a, b) {
+  a = normalizeText(a); b = normalizeText(b)
+  if (!a || !b) return 0
+  if (a === b) return 1.0
+  if (a.includes(b) || b.includes(a)) return 0.92
+  const bigrams = s => {
+    const m = new Map()
+    for (let i = 0; i < s.length - 1; i++) {
+      const bg = s.slice(i, i + 2)
+      m.set(bg, (m.get(bg) || 0) + 1)
     }
-    fields.push(cur.trim())
-    return fields
+    return m
+  }
+  const b1 = bigrams(a), b2 = bigrams(b)
+  let intersect = 0
+  for (const [bg, cnt] of b1) intersect += Math.min(cnt, b2.get(bg) || 0)
+  const total = (a.length - 1) + (b.length - 1)
+  return total > 0 ? (2 * intersect) / total : 0
+}
+
+function parseDate(raw) {
+  if (!raw) return null
+  const s = String(raw).trim()
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+  // Excel serial date
+  if (/^\d{4,5}$/.test(s)) {
+    const d = new Date((Number(s) - 25569) * 86400 * 1000)
+    if (!isNaN(d)) return d.toISOString().slice(0, 10)
+  }
+  const parts = s.split(/[/\-.]/)
+  if (parts.length === 3) {
+    const [a, b, c] = parts.map(Number)
+    if (a > 31) return `${a}-${String(b).padStart(2,'0')}-${String(c).padStart(2,'0')}`
+    if (c > 31) return `${c}-${String(b).padStart(2,'0')}-${String(a).padStart(2,'0')}`
+  }
+  return null
+}
+
+function cleanText(s) {
+  const v = s ? String(s).trim().replace(/\s+/g, ' ') : null
+  return v || null
+}
+
+// ── XLSX CDN loader (no npm install needed) ───────────────────
+async function loadXLSX() {
+  if (window.XLSX) return window.XLSX
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script')
+    script.src = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js'
+    script.onload  = () => resolve(window.XLSX)
+    script.onerror = () => reject(new Error('Could not load XLSX library — check your internet connection.'))
+    document.head.appendChild(script)
+  })
+}
+
+// ── File parser → [{sheetName, headers, rows}] ────────────────
+async function parseFile(file) {
+  if (file.name.match(/\.csv$/i)) {
+    const text  = await file.text()
+    const lines = text.split(/\r?\n/).filter(l => l.trim())
+    if (lines.length < 2) return []
+
+    function parseLine(line) {
+      const fields = []; let cur = '', inQ = false
+      for (let i = 0; i < line.length; i++) {
+        const c = line[i]
+        if (c === '"') { if (inQ && line[i+1] === '"') { cur += '"'; i++ } else inQ = !inQ }
+        else if (c === ',' && !inQ) { fields.push(cur.trim()); cur = '' }
+        else cur += c
+      }
+      fields.push(cur.trim())
+      return fields
+    }
+    const headers = parseLine(lines[0]).map(h => h.toLowerCase().trim())
+    const rows = lines.slice(1)
+      .map(l => {
+        const vals = parseLine(l)
+        const obj  = {}
+        headers.forEach((h, i) => { obj[h] = vals[i] ?? '' })
+        return obj
+      })
+      .filter(r => Object.values(r).some(v => String(v).trim()))
+    return [{ sheetName: file.name.replace(/\.csv$/i, ''), headers, rows }]
   }
 
-  const headers = parseLine(lines[0]).map(h => h.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''))
-  const rawHeaders = parseLine(lines[0]).map(h => h.toLowerCase())
-  const rows = lines.slice(1).map(l => {
-    const vals = parseLine(l)
-    const obj  = {}
-    rawHeaders.forEach((h, i) => { obj[h] = vals[i] ?? '' })
-    return obj
-  })
-  return { headers: rawHeaders, rows }
+  if (file.name.match(/\.xlsx?$/i)) {
+    const XLSX = await loadXLSX()
+    const buf  = await file.arrayBuffer()
+    const wb   = XLSX.read(buf, { type: 'array', cellText: true, cellDates: false })
+    return wb.SheetNames
+      .map(name => {
+        const ws   = wb.Sheets[name]
+        const data = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' })
+        if (data.length < 2) return null
+        const headers = data[0].map(h => String(h).toLowerCase().trim())
+        const rows = data.slice(1)
+          .map(r => {
+            const obj = {}
+            headers.forEach((h, i) => { obj[h] = String(r[i] ?? '').trim() })
+            return obj
+          })
+          .filter(r => Object.values(r).some(v => String(v).trim()))
+        return rows.length > 0 ? { sheetName: name, headers, rows } : null
+      })
+      .filter(Boolean)
+  }
+
+  throw new Error('Unsupported file type. Use .csv or .xlsx')
 }
 
-function buildHeaderMap(rawHeaders, columnMap) {
+// ── Auto-detect column mapping ─────────────────────────────────
+function detectMapping(headers) {
   const map = {}
-  for (const raw of rawHeaders) {
-    for (const [canonical, aliases] of Object.entries(columnMap)) {
-      if (aliases.includes(raw.toLowerCase())) { map[raw] = canonical; break }
+  for (const h of headers) {
+    const clean = h.toLowerCase().replace(/[\s_\-]+/g, '_').trim()
+    const raw   = h.toLowerCase().trim()
+    for (const [field, aliases] of Object.entries(COLUMN_ALIASES)) {
+      if (aliases.includes(clean) || aliases.includes(raw)) {
+        if (!map[h]) map[h] = field
+        break
+      }
     }
   }
   return map
 }
 
-// ── Mrkoon transform ──────────────────────────────────────────
-function transformMrkoonRow(raw, headerMap, userId) {
-  const row = {}
-  for (const [rawKey, val] of Object.entries(raw)) {
-    const canon = headerMap[rawKey]
-    if (canon) row[canon] = val === '' ? null : val
-  }
-  const errors = []
-  if (row.company_name) row.company_name = cleanCompany(row.company_name)
-  if (!row.company_name) errors.push('Missing company_name')
-  if (!row.entity)       errors.push('Missing entity')
-  else if (!VALID_ENTITIES.includes(row.entity.toUpperCase())) errors.push(`Invalid entity "${row.entity}"`)
-  else row.entity = row.entity.toUpperCase()
-  if (!row.stage)                                   row.stage = 'new_lead'
-  else if (!VALID_STAGES.includes(row.stage))       errors.push(`Invalid stage "${row.stage}"`)
-  if (row.estimated_gmv_month != null) {
-    const n = parseFloat(String(row.estimated_gmv_month).replace(/,/g, ''))
-    row.estimated_gmv_month = isNaN(n) ? null : n
-  }
-  if (row.next_action_date) {
-    const p = parseDate(row.next_action_date)
-    if (!p) errors.push(`Invalid date "${row.next_action_date}"`)
-    else row.next_action_date = p
-  }
-  row.date_added  = row.date_added ? (parseDate(row.date_added) ?? today()) : today()
-  row.assigned_to = userId
-  row.is_sna      = false
-  return { row, errors }
-}
-
-// ── LinkedIn transform ────────────────────────────────────────
-function transformLinkedInRow(raw, headerMap, userId, defaultEntity) {
+// ── Transform raw row → CRM lead object ───────────────────────
+function transformRow(raw, colMap, userId, defaultEntity) {
   const mapped = {}
-  for (const [rawKey, val] of Object.entries(raw)) {
-    const canon = headerMap[rawKey]
-    if (canon) mapped[canon] = val === '' ? null : val
+  for (const [h, val] of Object.entries(raw)) {
+    const field = colMap[h]
+    if (field) mapped[field] = val === '' ? null : val
   }
 
   const errors = []
-  const first  = mapped._first_name ?? ''
-  const last   = mapped._last_name  ?? ''
-  const name   = [first, last].filter(Boolean).join(' ').trim()
+  const company = cleanText(mapped.company_name)
+  if (!company) errors.push('Missing company name')
 
-  if (!mapped.company_name) errors.push('Missing company')
+  let ent = (mapped.entity ?? defaultEntity ?? '').toUpperCase().trim()
+  if (ent === 'EGYPT') ent = 'EG'
+  if (ent === 'SAUDI' || ent === 'KSA' || ent === 'SA') ent = 'KSA'
+  if (!VALID_ENTITIES.includes(ent)) {
+    if (defaultEntity) ent = defaultEntity
+    else errors.push(`Unknown entity "${mapped.entity}" — set EG or KSA`)
+  }
 
-  const entity = (mapped.entity ?? defaultEntity ?? '').toUpperCase()
-  if (!VALID_ENTITIES.includes(entity)) errors.push(`Invalid entity "${entity}" — set a default or add entity column`)
+  const rawStage = mapped.stage?.toLowerCase().replace(/\s+/g,'_') ?? ''
+  const stage    = VALID_STAGES.includes(rawStage) ? rawStage : 'new_lead'
 
   const row = {
-    company_name:   cleanCompany(mapped.company_name),
-    contact_name:   name || null,
-    contact_title:  mapped.contact_title  ?? null,
-    email:          mapped.email          ?? null,
-    phone:          mapped.phone          ?? null,
-    entity,
-    stage:          'new_lead',
-    source:         'linkedin',
-    notes:          mapped.notes          ?? null,
-    date_added:     today(),
-    assigned_to:    userId,
-    is_sna:         false,
+    company_name:        company,
+    entity:              ent || null,
+    contact_name:        cleanText(mapped.contact_name),
+    contact_title:       cleanText(mapped.contact_title),
+    phone:               cleanText(mapped.phone),
+    email:               cleanText(mapped.email),
+    stage,
+    lead_source:         cleanText(mapped.lead_source),
+    notes:               cleanText(mapped.notes),
+    next_action:         cleanText(mapped.next_action),
+    next_action_date:    mapped.next_action_date ? parseDate(mapped.next_action_date) : null,
+    estimated_gmv_month: mapped.estimated_gmv_month
+      ? (parseFloat(String(mapped.estimated_gmv_month).replace(/,/g, '')) || null) : null,
+    deal_value: mapped.deal_value
+      ? (parseFloat(String(mapped.deal_value).replace(/,/g, '')) || null) : null,
+    date_added:  mapped.date_added ? (parseDate(mapped.date_added) ?? today()) : today(),
+    assigned_to: userId,
+    is_sna:      false,
   }
-
   return { row, errors }
 }
 
-function today() { return new Date().toISOString().slice(0, 10) }
+// ── Cross-reference a row against existing leads ──────────────
+function matchRow(row, existingLeads) {
+  const normPhone = normalizePhone(row.phone)
 
-function parseDate(raw) {
-  if (!raw) return null
-  const trimmed = String(raw).trim()
-  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed
-  const parts = trimmed.split(/[/\-.]/)
-  if (parts.length === 3) {
-    const [a, b, c] = parts.map(Number)
-    if (a > 31) return `${a}-${String(b).padStart(2,'0')}-${String(c).padStart(2,'0')}`
-    return `${c}-${String(b).padStart(2,'0')}-${String(a).padStart(2,'0')}`
+  // Priority 1: exact phone match (strongest signal)
+  if (normPhone) {
+    for (const ex of existingLeads) {
+      if (normalizePhone(ex.phone) === normPhone) {
+        return { matchId: ex.id, matchName: ex.company_name, confidence: 'phone' }
+      }
+    }
   }
+
+  // Priority 2: company name fuzzy match (same entity preferred)
+  let bestScore = 0, bestMatch = null
+  for (const ex of existingLeads) {
+    // Same entity is required when both sides have an entity
+    if (row.entity && ex.entity && row.entity !== ex.entity) continue
+    const s = similarity(row.company_name, ex.company_name)
+    if (s > bestScore) { bestScore = s; bestMatch = ex }
+  }
+
+  if (bestScore >= 0.88) {
+    // Contact name as a tiebreaker to boost or reduce confidence
+    const contactSim = similarity(row.contact_name, bestMatch?.contact_name)
+    const conf = bestScore >= 0.95 ? 'high' : contactSim > 0.7 ? 'high' : 'medium'
+    return { matchId: bestMatch.id, matchName: bestMatch.company_name, confidence: conf }
+  }
+  if (bestScore >= 0.72) {
+    return { matchId: bestMatch.id, matchName: bestMatch.company_name, confidence: 'low' }
+  }
+
   return null
 }
 
-// ── Drop Zone component ───────────────────────────────────────
-function DropZone({ label, sublabel, icon: Icon, accentColor, onFile, disabled }) {
-  const inputRef = useRef(null)
-  const [dragOver, setDragOver] = useState(false)
+// ── Build full preview from all sheets ───────────────────────
+function buildPreview(sheets, existingLeads, defaultEntity, defaultUserId) {
+  const phonesSeen   = new Map()
+  const companiesSeen = new Map()
+  const rows = []
 
-  function handleDrop(e) {
-    e.preventDefault()
-    setDragOver(false)
-    if (disabled) return
-    const f = e.dataTransfer.files[0]
-    if (f) onFile(f)
+  for (const sheet of sheets) {
+    if (sheet.skip) continue
+    const assignTo = sheet.repId || defaultUserId
+
+    for (const raw of sheet.rows) {
+      const { row, errors } = transformRow(raw, sheet.colMap, assignTo, defaultEntity)
+
+      if (errors.some(e => e.includes('Missing company'))) {
+        rows.push({ row, action: 'skip', match: null, errors, sheetName: sheet.sheetName, reason: 'error' })
+        continue
+      }
+
+      // In-file duplicate detection
+      const normPhone   = normalizePhone(row.phone)
+      const normCompany = `${normalizeText(row.company_name)}||${row.entity}`
+
+      if ((normPhone && phonesSeen.has(normPhone)) || companiesSeen.has(normCompany)) {
+        rows.push({ row, action: 'skip', match: null, errors, sheetName: sheet.sheetName, reason: 'in-file-duplicate' })
+        continue
+      }
+
+      if (normPhone) phonesSeen.set(normPhone, rows.length)
+      companiesSeen.set(normCompany, rows.length)
+
+      const match = matchRow(row, existingLeads)
+      rows.push({
+        row, errors,
+        action:    match ? 'update' : 'create',
+        match,
+        sheetName: sheet.sheetName,
+        reason:    null,
+      })
+    }
   }
+  return rows
+}
 
+// ── Confidence badge ──────────────────────────────────────────
+const CONF_COLORS = { phone: '#22c55e', high: 'var(--brand-cyan)', medium: '#f59e0b', low: '#94a3b8' }
+function ConfBadge({ confidence }) {
   return (
-    <div
-      onDrop={handleDrop}
-      onDragOver={e => { e.preventDefault(); if (!disabled) setDragOver(true) }}
-      onDragLeave={() => setDragOver(false)}
-      onClick={() => !disabled && inputRef.current?.click()}
-      style={{
-        border: `2px dashed ${dragOver ? accentColor : 'var(--border-default)'}`,
-        borderRadius: '12px',
-        padding: '32px 20px',
-        textAlign: 'center',
-        cursor: disabled ? 'default' : 'pointer',
-        background: dragOver ? `${accentColor}0a` : 'transparent',
-        opacity: disabled ? 0.5 : 1,
-        transition: 'all 0.15s',
-        flex: 1,
-      }}
-    >
-      <Icon size={24} style={{ color: accentColor, marginBottom: '10px' }} />
-      <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>{label}</div>
-      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px' }}>{sublabel}</div>
-      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Drop CSV or click to browse</div>
-      <input ref={inputRef} type="file" accept=".csv" style={{ display: 'none' }}
-        onChange={e => onFile(e.target.files[0])} />
-    </div>
+    <span style={{
+      fontSize: '9px', padding: '1px 5px', borderRadius: '4px', fontWeight: 700,
+      background: `${CONF_COLORS[confidence]}22`, color: CONF_COLORS[confidence],
+      textTransform: 'uppercase', letterSpacing: '0.04em',
+    }}>
+      {confidence}
+    </span>
   )
 }
 
-// ── Zone result panel ─────────────────────────────────────────
-function ZoneResult({ result, onReset }) {
-  return (
-    <div>
-      <div style={{
-        padding: '16px', borderRadius: '10px',
-        background: result.inserted > 0 ? 'rgba(34,197,94,0.06)' : 'var(--bg-card)',
-        border: `1px solid ${result.inserted > 0 ? 'rgba(34,197,94,0.2)' : 'var(--border-default)'}`,
-        marginBottom: '10px', display: 'flex', alignItems: 'flex-start', gap: '12px',
-      }}>
-        {result.inserted > 0
-          ? <CheckCircle2 size={18} style={{ color: '#22c55e', flexShrink: 0 }} />
-          : <AlertTriangle size={18} style={{ color: '#f59e0b', flexShrink: 0 }} />
-        }
-        <div style={{ fontSize: '13px' }}>
-          <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
-            {result.inserted > 0
-              ? `${result.inserted} lead${result.inserted !== 1 ? 's' : ''} imported`
-              : 'No leads imported'}
-          </div>
-          {result.duplicates?.length > 0 && (
-            <div style={{ color: 'var(--text-muted)' }}>
-              {result.duplicates.length} duplicate{result.duplicates.length !== 1 ? 's' : ''} skipped
-            </div>
-          )}
-          {result.errors?.length > 0 && (
-            <div style={{ color: '#ef4444' }}>{result.errors.length} insert error{result.errors.length !== 1 ? 's' : ''}</div>
-          )}
-        </div>
-      </div>
-      <button className="btn btn-ghost btn-sm" onClick={onReset}>Import another file</button>
-    </div>
-  )
-}
-
-// ── Zone preview panel ────────────────────────────────────────
-function ZonePreview({ file, parsed, importing, onImport, onReset, importLabel }) {
-  return (
-    <div>
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '10px',
-        padding: '12px 14px', borderRadius: '8px',
-        background: 'var(--bg-card)', border: '1px solid var(--border-default)',
-        marginBottom: '12px',
-      }}>
-        <FileText size={16} style={{ color: 'var(--brand-cyan)', flexShrink: 0 }} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {file.name}
-          </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{parsed.total} rows parsed</div>
-        </div>
-        <button className="btn btn-ghost btn-icon" onClick={onReset}><X size={13} /></button>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
-        <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)' }}>
-          <div style={{ fontSize: '20px', fontWeight: 700, color: '#22c55e' }}>{parsed.valid.length}</div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Ready to import</div>
-        </div>
-        <div style={{
-          padding: '12px', borderRadius: '8px',
-          background: parsed.skipped.length > 0 ? 'rgba(239,68,68,0.08)' : 'var(--bg-card)',
-          border: `1px solid ${parsed.skipped.length > 0 ? 'rgba(239,68,68,0.2)' : 'var(--border-default)'}`,
-        }}>
-          <div style={{ fontSize: '20px', fontWeight: 700, color: parsed.skipped.length > 0 ? '#ef4444' : 'var(--text-muted)' }}>
-            {parsed.skipped.length}
-          </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Rows with errors</div>
-        </div>
-      </div>
-
-      {parsed.skipped.length > 0 && (
-        <div style={{ marginBottom: '12px', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.2)', overflow: 'hidden' }}>
-          <div style={{ padding: '8px 12px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#ef4444', background: 'rgba(239,68,68,0.06)', borderBottom: '1px solid rgba(239,68,68,0.15)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <AlertTriangle size={11} /> Skipped rows
-          </div>
-          <div style={{ maxHeight: '160px', overflowY: 'auto' }}>
-            {parsed.skipped.slice(0, 20).map((s, i) => (
-              <div key={i} style={{ padding: '7px 12px', fontSize: '12px', borderBottom: '1px solid var(--border-default)', color: 'var(--text-secondary)' }}>
-                <span style={{ color: 'var(--text-muted)', marginRight: '6px' }}>Row {i + 2}:</span>
-                {s.errors.join(', ')}
-              </div>
-            ))}
-            {parsed.skipped.length > 20 && (
-              <div style={{ padding: '7px 12px', fontSize: '12px', color: 'var(--text-muted)' }}>…and {parsed.skipped.length - 20} more</div>
-            )}
-          </div>
-        </div>
-      )}
-
-      <div style={{ display: 'flex', gap: '8px' }}>
-        {parsed.valid.length > 0 && (
-          <button className="btn btn-primary btn-sm" onClick={onImport} disabled={importing}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Upload size={13} />
-            {importing ? 'Importing…' : importLabel}
-          </button>
-        )}
-        <button className="btn btn-ghost btn-sm" onClick={onReset}>
-          {parsed.valid.length === 0 ? 'Try another file' : 'Cancel'}
-        </button>
-      </div>
-    </div>
-  )
-}
-
-// ── Main component ────────────────────────────────────────────
+// ── Main component ─────────────────────────────────────────────
 export default function Import() {
-  const { userId, entityView } = useAuth()
-  const { t, toast }           = useApp()
-  const queryClient            = useQueryClient()
+  const { userId, profile, isManager } = useAuth()
+  const { toast }                      = useApp()
+  const queryClient                    = useQueryClient()
 
-  // Zone 1: Mrkoon System
-  const [mFile,      setMFile]      = useState(null)
-  const [mParsed,    setMParsed]    = useState(null)
-  const [mImporting, setMImporting] = useState(false)
-  const [mResult,    setMResult]    = useState(null)
+  // Wizard stage: idle → loading → config (multi-sheet) → preview → done
+  const [wizStage,     setWizStage]    = useState('idle')
+  const [uploadMode,   setUploadMode]  = useState('total')  // total | by_rep
+  const [entityFilter, setEntityFilter] = useState('EG')
+  const [sheets,       setSheets]      = useState([])
+  const [existingLeads, setExisting]   = useState([])
+  const [bdReps,       setBdReps]      = useState([])
+  const [previewRows,  setPreviewRows] = useState([])
+  const [importing,    setImporting]   = useState(false)
+  const [result,       setResult]      = useState(null)
+  const [fileError,    setFileError]   = useState(null)
+  const inputRef = useRef(null)
 
-  // Zone 2: LinkedIn
-  const [lFile,      setLFile]      = useState(null)
-  const [lParsed,    setLParsed]    = useState(null)
-  const [lImporting, setLImporting] = useState(false)
-  const [lResult,    setLResult]    = useState(null)
-  const [lEntity,    setLEntity]    = useState(entityView === 'KSA' ? 'KSA' : 'EG')
+  // Fetch existing leads + reps once
+  useEffect(() => {
+    supabase.from('leads')
+      .select('id, company_name, contact_name, phone, entity')
+      .then(({ data }) => setExisting(data ?? []))
+    supabase.from('profiles')
+      .select('id, full_name, email, role')
+      .in('role', ['bd_rep','bd_am','bd_tl','cco'])
+      .then(({ data }) => setBdReps(data ?? []))
+  }, [])
 
-  // ── Parse Mrkoon file ───────────────────────────────────────
-  const handleMrkoonFile = useCallback(async (f) => {
-    if (!f) return
-    if (!f.name.endsWith('.csv')) { toast({ type: 'error', message: 'Only CSV files are supported.' }); return }
-    setMFile(f); setMParsed(null); setMResult(null)
-    const text = await f.text()
-    const raw  = parseCSV(text)
-    if (raw.rows.length === 0) { toast({ type: 'error', message: 'File is empty.' }); setMFile(null); return }
-    const headerMap = buildHeaderMap(raw.headers, MRKOON_COLUMN_MAP)
-    const valid = [], skipped = []
-    for (const row of raw.rows) {
-      const { row: r, errors } = transformMrkoonRow(row, headerMap, userId)
-      if (errors.length > 0) skipped.push({ rawRow: row, errors })
-      else valid.push(r)
-    }
-    setMParsed({ valid, skipped, total: raw.rows.length })
-  }, [userId])
-
-  // ── Parse LinkedIn file ─────────────────────────────────────
-  const handleLinkedInFile = useCallback(async (f) => {
-    if (!f) return
-    if (!f.name.endsWith('.csv')) { toast({ type: 'error', message: 'Only CSV files are supported.' }); return }
-    setLFile(f); setLParsed(null); setLResult(null)
-    const text = await f.text()
-    const raw  = parseCSV(text)
-    if (raw.rows.length === 0) { toast({ type: 'error', message: 'File is empty.' }); setLFile(null); return }
-    const headerMap = buildHeaderMap(raw.headers, LINKEDIN_COLUMN_MAP)
-    const valid = [], skipped = []
-    for (const row of raw.rows) {
-      const { row: r, errors } = transformLinkedInRow(row, headerMap, userId, lEntity)
-      if (errors.length > 0) skipped.push({ rawRow: row, errors })
-      else valid.push(r)
-    }
-    setLParsed({ valid, skipped, total: raw.rows.length })
-  }, [userId, lEntity])
-
-  // ── Import helpers ──────────────────────────────────────────
-  async function runImport(rows, setImporting, setResult) {
-    setImporting(true)
+  // ── Handle file upload ──────────────────────────────────────
+  async function handleFile(file) {
+    if (!file) return
+    setFileError(null)
+    setWizStage('loading')
     try {
-      const { data: existing } = await supabase.from('leads').select('company_name, entity')
-      const existingSet = new Set((existing ?? []).map(r => `${normalizeForCompare(r.company_name)}||${r.entity}`))
-      const toInsert = [], duplicates = []
-      for (const row of rows) {
-        const key = `${normalizeForCompare(row.company_name)}||${row.entity}`
-        if (existingSet.has(key)) duplicates.push(row.company_name)
-        else toInsert.push(row)
+      const parsed = await parseFile(file)
+      if (parsed.length === 0) throw new Error('No data rows found. Make sure the file has headers and at least one data row.')
+
+      const withMeta = parsed.map(s => ({
+        ...s,
+        colMap: detectMapping(s.headers),
+        repId:  null,   // null = use current user
+        skip:   false,
+      }))
+      setSheets(withMeta)
+
+      if (parsed.length > 1) {
+        // Multi-sheet: go to config step so user can assign reps
+        setWizStage('config')
+      } else {
+        // Single sheet: skip config, go straight to preview
+        const rows = buildPreview(withMeta, existingLeads, entityFilter, userId)
+        setPreviewRows(rows)
+        setWizStage('preview')
       }
-      let insertedCount = 0, insertErrors = []
-      for (let i = 0; i < toInsert.length; i += 100) {
-        const { error } = await supabase.from('leads').insert(toInsert.slice(i, i + 100))
-        if (error) insertErrors.push(error.message)
-        else insertedCount += Math.min(100, toInsert.length - i)
-      }
-      setResult({ inserted: insertedCount, duplicates, errors: insertErrors })
-      if (insertedCount > 0) {
-        queryClient.invalidateQueries({ queryKey: ['leads'] })
-        queryClient.invalidateQueries({ queryKey: ['accounts'] })
-        toast({ type: 'success', message: `${insertedCount} lead${insertedCount !== 1 ? 's' : ''} imported` })
-      }
-    } catch (err) {
-      toast({ type: 'error', message: err.message ?? 'Import failed' })
-    } finally {
-      setImporting(false)
+    } catch (e) {
+      setFileError(e.message)
+      setWizStage('idle')
     }
   }
 
-  function resetMrkoon()   { setMFile(null); setMParsed(null); setMResult(null) }
-  function resetLinkedIn() { setLFile(null); setLParsed(null); setLResult(null) }
+  function proceedToPreview() {
+    const rows = buildPreview(sheets, existingLeads, entityFilter, userId)
+    setPreviewRows(rows)
+    setWizStage('preview')
+  }
 
-  const anyActive = mFile || lFile
+  // ── Toggle per-row action ──────────────────────────────────
+  function toggleAction(i) {
+    setPreviewRows(prev => {
+      const updated = [...prev]
+      const r = updated[i]
+      if (r.reason === 'error') return prev   // can't restore error rows
+      if (r.action === 'skip') {
+        updated[i] = { ...r, action: r.match ? 'update' : 'create', reason: null }
+      } else {
+        updated[i] = { ...r, action: 'skip', reason: 'manual' }
+      }
+      return updated
+    })
+  }
 
+  // ── Run the import ─────────────────────────────────────────
+  async function runImport() {
+    setImporting(true)
+    const toCreate = previewRows.filter(r => r.action === 'create')
+    const toUpdate = previewRows.filter(r => r.action === 'update' && r.match?.matchId)
+
+    let created = 0, updated = 0, errs = []
+
+    // Batch inserts
+    for (let i = 0; i < toCreate.length; i += 100) {
+      const batch = toCreate.slice(i, i + 100).map(r => r.row)
+      const { error } = await supabase.from('leads').insert(batch)
+      if (error) errs.push(error.message)
+      else created += batch.length
+    }
+
+    // Updates: only overwrite non-empty incoming fields (preserve existing data)
+    for (const r of toUpdate) {
+      const u = {}
+      if (r.row.contact_name)        u.contact_name        = r.row.contact_name
+      if (r.row.contact_title)       u.contact_title       = r.row.contact_title
+      if (r.row.phone)               u.phone               = r.row.phone
+      if (r.row.email)               u.email               = r.row.email
+      if (r.row.notes)               u.notes               = r.row.notes
+      if (r.row.next_action)         u.next_action         = r.row.next_action
+      if (r.row.next_action_date)    u.next_action_date    = r.row.next_action_date
+      if (r.row.estimated_gmv_month) u.estimated_gmv_month = r.row.estimated_gmv_month
+      if (r.row.lead_source)         u.lead_source         = r.row.lead_source
+      if (Object.keys(u).length === 0) { updated++; continue }
+      const { error } = await supabase.from('leads').update(u).eq('id', r.match.matchId)
+      if (error) errs.push(error.message)
+      else updated++
+    }
+
+    setResult({ created, updated, skipped: previewRows.filter(r => r.action === 'skip').length, errors: errs })
+    if (created > 0 || updated > 0) {
+      queryClient.invalidateQueries({ queryKey: ['leads'] })
+      queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      toast({ type: 'success', message: `${created} created · ${updated} updated` })
+    }
+    setImporting(false)
+    setWizStage('done')
+  }
+
+  function reset() {
+    setWizStage('idle'); setSheets([]); setPreviewRows([]); setResult(null); setFileError(null)
+    if (inputRef.current) inputRef.current.value = ''
+  }
+
+  const creates = previewRows.filter(r => r.action === 'create').length
+  const updates = previewRows.filter(r => r.action === 'update').length
+  const skips   = previewRows.filter(r => r.action === 'skip').length
+
+  // ── Render ─────────────────────────────────────────────────
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <TopBar title={t('nav.import')} />
+      <TopBar title="Smart Import" />
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '24px', maxWidth: '900px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '24px', maxWidth: '960px' }}>
 
-        {/* ── Drop zones ── */}
-        {!anyActive && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '28px' }}>
-            <DropZone
-              label="Mrkoon System Export"
-              sublabel="Daily export from the CRM system"
-              icon={Database}
-              accentColor="var(--brand-green)"
-              onFile={handleMrkoonFile}
-            />
-            <div style={{ flex: 1 }}>
-              {/* LinkedIn entity selector */}
-              <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Default entity:</span>
-                {VALID_ENTITIES.map(e => (
-                  <button key={e} onClick={() => setLEntity(e)}
-                    style={{
-                      fontSize: '11px', fontWeight: 600, padding: '2px 10px', borderRadius: '6px',
-                      border: `1px solid ${lEntity === e ? 'var(--brand-cyan)' : 'var(--border-default)'}`,
-                      background: lEntity === e ? 'rgba(34,211,238,0.1)' : 'transparent',
-                      color: lEntity === e ? 'var(--brand-cyan)' : 'var(--text-muted)',
-                      cursor: 'pointer',
-                    }}>
-                    {e}
+        {/* ── IDLE ─────────────────────────────────────────── */}
+        {wizStage === 'idle' && (
+          <div>
+            {/* Upload mode selector */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
+              {[
+                { id: 'total',  label: 'Total Upload',  sub: 'All reps in one file or single sheet', icon: Building },
+                { id: 'by_rep', label: 'By BD Rep',      sub: 'Each Excel sheet = one rep',          icon: Users },
+              ].map(m => {
+                const Icon = m.icon
+                const active = uploadMode === m.id
+                return (
+                  <button key={m.id} onClick={() => setUploadMode(m.id)} style={{
+                    padding: '14px 16px', borderRadius: '10px', textAlign: 'left', cursor: 'pointer',
+                    border: `2px solid ${active ? 'var(--brand-green)' : 'var(--border-default)'}`,
+                    background: active ? 'rgba(34,197,94,0.06)' : 'var(--bg-card)',
+                    display: 'flex', alignItems: 'flex-start', gap: '12px',
+                  }}>
+                    <Icon size={18} style={{ color: active ? 'var(--brand-green)' : 'var(--text-muted)', flexShrink: 0, marginTop: '1px' }} />
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: active ? 'var(--brand-green)' : 'var(--text-primary)' }}>{m.label}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{m.sub}</div>
+                    </div>
                   </button>
+                )
+              })}
+            </div>
+
+            {/* Default entity */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Default entity (if not in file):</span>
+              {VALID_ENTITIES.map(e => (
+                <button key={e} onClick={() => setEntityFilter(e)} style={{
+                  fontSize: '12px', fontWeight: 600, padding: '4px 14px', borderRadius: '6px', cursor: 'pointer',
+                  border: `1px solid ${entityFilter === e ? 'var(--brand-cyan)' : 'var(--border-default)'}`,
+                  background: entityFilter === e ? 'rgba(34,211,238,0.1)' : 'transparent',
+                  color: entityFilter === e ? 'var(--brand-cyan)' : 'var(--text-muted)',
+                }}>
+                  {e}
+                </button>
+              ))}
+            </div>
+
+            {/* Drop zone */}
+            <div
+              onClick={() => inputRef.current?.click()}
+              onDrop={e => { e.preventDefault(); handleFile(e.dataTransfer.files[0]) }}
+              onDragOver={e => e.preventDefault()}
+              style={{
+                border: '2px dashed var(--border-default)', borderRadius: '12px',
+                padding: '52px 24px', textAlign: 'center', cursor: 'pointer',
+                background: 'var(--bg-card)', transition: 'border-color 0.15s',
+              }}
+            >
+              <Upload size={28} style={{ color: 'var(--brand-green)', marginBottom: '12px' }} />
+              <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px' }}>
+                Drop your file here or click to browse
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
+                .xlsx (multiple sheets supported) or .csv · Any column structure
+                <br />Matches by phone number, company name, and contact name
+              </div>
+              <input ref={inputRef} type="file" accept=".csv,.xlsx,.xls" style={{ display: 'none' }}
+                onChange={e => handleFile(e.target.files[0])} />
+            </div>
+
+            {fileError && (
+              <div style={{ marginTop: '12px', padding: '10px 14px', borderRadius: '8px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', fontSize: '13px' }}>
+                <AlertTriangle size={13} style={{ display: 'inline', marginRight: '6px' }} />
+                {fileError}
+              </div>
+            )}
+
+            {/* Column reference */}
+            <div style={{ marginTop: '24px', padding: '16px 18px', borderRadius: '10px', background: 'var(--bg-card)', border: '1px solid var(--border-default)' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '10px' }}>
+                Auto-recognized column names
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '5px 16px' }}>
+                {Object.entries(COLUMN_ALIASES).map(([field, aliases]) => (
+                  <div key={field} style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{field}</span>
+                    <span style={{ color: 'var(--text-muted)' }}> · {aliases.slice(0, 3).join(', ')}</span>
+                  </div>
                 ))}
               </div>
-              <DropZone
-                label="LinkedIn Campaign"
-                sublabel="Lead gen form export from LinkedIn Ads"
-                icon={Linkedin}
-                accentColor="var(--brand-cyan)"
-                onFile={handleLinkedInFile}
-              />
             </div>
           </div>
         )}
 
-        {/* ── Active zones ── */}
-        <div style={{ display: anyActive ? 'grid' : 'none', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
-
-          {/* Mrkoon zone active */}
-          <div>
-            {!mFile && !anyActive && null}
-            {mFile && mParsed && !mResult && (
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                  <Database size={14} style={{ color: 'var(--brand-green)' }} />
-                  <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mrkoon System</span>
-                </div>
-                <ZonePreview
-                  file={mFile} parsed={mParsed} importing={mImporting}
-                  onImport={() => runImport(mParsed.valid, setMImporting, setMResult)}
-                  onReset={resetMrkoon}
-                  importLabel={`Import ${mParsed.valid.length} lead${mParsed.valid.length !== 1 ? 's' : ''}`}
-                />
-              </div>
-            )}
-            {mResult && <ZoneResult result={mResult} onReset={resetMrkoon} />}
+        {/* ── LOADING ──────────────────────────────────────── */}
+        {wizStage === 'loading' && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', padding: '80px 0' }}>
+            <RefreshCw size={28} style={{ color: 'var(--brand-green)', animation: 'spin 1s linear infinite' }} />
+            <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Parsing file and cross-referencing against existing records…</div>
           </div>
+        )}
 
-          {/* LinkedIn zone active */}
+        {/* ── CONFIG (multi-sheet: assign reps) ────────────── */}
+        {wizStage === 'config' && (
           <div>
-            {lFile && lParsed && !lResult && (
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                  <Linkedin size={14} style={{ color: 'var(--brand-cyan)' }} />
-                  <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>LinkedIn · {lEntity}</span>
-                </div>
-                <ZonePreview
-                  file={lFile} parsed={lParsed} importing={lImporting}
-                  onImport={() => runImport(lParsed.valid, setLImporting, setLResult)}
-                  onReset={resetLinkedIn}
-                  importLabel={`Import ${lParsed.valid.length} lead${lParsed.valid.length !== 1 ? 's' : ''}`}
-                />
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                {sheets.length} sheet{sheets.length !== 1 ? 's' : ''} detected
               </div>
-            )}
-            {lResult && <ZoneResult result={lResult} onReset={resetLinkedIn} />}
-          </div>
-
-        </div>
-
-        {/* ── Column references (shown when idle) ── */}
-        {!anyActive && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-
-            <div>
-              <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '8px', paddingBottom: '6px', borderBottom: '1px solid var(--border-default)' }}>
-                Mrkoon Export — Columns
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px' }}>
-                {Object.entries(MRKOON_COLUMN_MAP).map(([canon, aliases]) => (
-                  <div key={canon} style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                    <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{canon}</span>
-                    {' '}<span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>({aliases[0]})</span>
-                  </div>
-                ))}
-              </div>
-              <div style={{ marginTop: '10px', fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
-                <strong>Required:</strong> company_name, entity (EG or KSA)
+              <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                {uploadMode === 'by_rep'
+                  ? 'Assign each sheet to a BD rep. Leave blank to assign to your own account.'
+                  : 'Review detected sheets before proceeding.'}
               </div>
             </div>
 
-            <div>
-              <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '8px', paddingBottom: '6px', borderBottom: '1px solid var(--border-default)' }}>
-                LinkedIn Export — Columns
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px' }}>
-                {[
-                  ['first_name',   'First Name'],
-                  ['last_name',    'Last Name'],
-                  ['company',      'Company'],
-                  ['title',        'Job Title'],
-                  ['email',        'Email Address'],
-                  ['phone',        'Phone Number'],
-                  ['entity',       'entity (optional)'],
-                  ['campaign',     '→ notes field'],
-                ].map(([col, hint]) => (
-                  <div key={col} style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                    <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{col}</span>
-                    {' '}<span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>({hint})</span>
+            {sheets.map((s, i) => (
+              <div key={i} style={{
+                padding: '14px 16px', borderRadius: '10px', marginBottom: '8px',
+                background: s.skip ? 'var(--bg-base)' : 'var(--bg-card)',
+                border: `1px solid ${s.skip ? 'var(--border-subtle)' : 'var(--border-default)'}`,
+                opacity: s.skip ? 0.5 : 1,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <FileText size={15} style={{ color: s.skip ? 'var(--text-muted)' : 'var(--brand-green)', flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                      {s.sheetName}
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                      {s.rows.length} rows · {Object.keys(s.colMap).length} columns mapped
+                      {Object.keys(s.colMap).length > 0 && (
+                        <span> ({Object.values(s.colMap).join(', ')})</span>
+                      )}
+                    </div>
                   </div>
-                ))}
+                  {uploadMode === 'by_rep' && !s.skip && (
+                    <select
+                      value={s.repId ?? ''}
+                      onChange={e => {
+                        const upd = [...sheets]; upd[i] = { ...s, repId: e.target.value || null }; setSheets(upd)
+                      }}
+                      className="crm-input"
+                      style={{ fontSize: '12px', width: '180px', flexShrink: 0 }}
+                    >
+                      <option value="">My account</option>
+                      {bdReps.map(r => (
+                        <option key={r.id} value={r.id}>{r.full_name ?? r.email}</option>
+                      ))}
+                    </select>
+                  )}
+                  <button
+                    onClick={() => { const upd = [...sheets]; upd[i] = { ...s, skip: !s.skip }; setSheets(upd) }}
+                    style={{
+                      fontSize: '11px', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer',
+                      border: '1px solid var(--border-default)', background: 'transparent',
+                      color: s.skip ? 'var(--brand-cyan)' : 'var(--text-muted)',
+                    }}
+                  >
+                    {s.skip ? 'Include' : 'Skip'}
+                  </button>
+                </div>
               </div>
-              <div style={{ marginTop: '10px', fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
-                <strong>Required:</strong> company · All leads → new_lead, source=linkedin
-              </div>
+            ))}
+
+            <div style={{ display: 'flex', gap: '8px', marginTop: '20px' }}>
+              <button className="btn btn-primary btn-sm" onClick={proceedToPreview}
+                disabled={sheets.every(s => s.skip)}>
+                Preview import →
+              </button>
+              <button className="btn btn-ghost btn-sm" onClick={reset}>Cancel</button>
             </div>
           </div>
         )}
+
+        {/* ── PREVIEW ──────────────────────────────────────── */}
+        {wizStage === 'preview' && (
+          <div>
+            {/* Summary tiles */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '20px' }}>
+              {[
+                { label: 'New leads',            count: creates, color: '#22c55e', bg: 'rgba(34,197,94,0.08)' },
+                { label: 'Update existing',       count: updates, color: 'var(--brand-cyan)', bg: 'rgba(34,211,238,0.08)' },
+                { label: 'Skip (dup / error)',    count: skips,   color: '#94a3b8', bg: 'var(--bg-card)' },
+              ].map(tile => (
+                <div key={tile.label} style={{
+                  padding: '14px 16px', borderRadius: '10px',
+                  background: tile.bg, border: `1px solid ${tile.color}33`,
+                }}>
+                  <div style={{ fontSize: '26px', fontWeight: 700, color: tile.color }}>{tile.count}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{tile.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Row table */}
+            <div style={{ borderRadius: '10px', border: '1px solid var(--border-default)', overflow: 'hidden', marginBottom: '16px' }}>
+              {/* Header */}
+              <div style={{
+                display: 'grid', gridTemplateColumns: '2fr 1.5fr 0.8fr 1.2fr 60px',
+                padding: '8px 14px', background: 'var(--bg-elevated)',
+                borderBottom: '1px solid var(--border-default)',
+              }}>
+                {['Company', 'Contact / Phone', 'Entity', 'Status', ''].map(h => (
+                  <div key={h} style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>{h}</div>
+                ))}
+              </div>
+
+              {/* Rows */}
+              <div style={{ maxHeight: '440px', overflowY: 'auto' }}>
+                {previewRows.map((r, i) => {
+                  const isSkip   = r.action === 'skip'
+                  const isUpdate = r.action === 'update'
+                  const isCreate = r.action === 'create'
+                  return (
+                    <div key={i} style={{
+                      display: 'grid', gridTemplateColumns: '2fr 1.5fr 0.8fr 1.2fr 60px',
+                      padding: '7px 14px', borderBottom: '1px solid var(--border-subtle)',
+                      opacity: isSkip ? 0.45 : 1,
+                      background: isUpdate ? 'rgba(34,211,238,0.02)' : 'transparent',
+                    }}>
+                      <div>
+                        <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {r.row.company_name || '—'}
+                        </div>
+                        {r.match && (
+                          <div style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                            <span>→ {r.match.matchName}</span>
+                            <ConfBadge confidence={r.match.confidence} />
+                          </div>
+                        )}
+                        {r.reason === 'in-file-duplicate' && (
+                          <div style={{ fontSize: '10px', color: '#f59e0b' }}>duplicate in this file</div>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', overflow: 'hidden' }}>
+                        {r.row.contact_name && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <User size={10} style={{ flexShrink: 0 }} /> {r.row.contact_name}
+                          </div>
+                        )}
+                        {r.row.phone && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)' }}>
+                            <Phone size={10} style={{ flexShrink: 0 }} /> {r.row.phone}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', alignSelf: 'center' }}>{r.row.entity}</div>
+                      <div style={{ alignSelf: 'center' }}>
+                        {isCreate && <span style={{ fontSize: '10px', fontWeight: 700, color: '#22c55e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>NEW</span>}
+                        {isUpdate && <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--brand-cyan)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>UPDATE</span>}
+                        {isSkip   && (
+                          <span style={{ fontSize: '10px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>SKIP</span>
+                        )}
+                        {r.errors?.length > 0 && !r.errors.some(e => e.includes('Missing company')) && (
+                          <div style={{ fontSize: '10px', color: '#f59e0b', marginTop: '2px' }}>{r.errors[0]}</div>
+                        )}
+                        {r.errors?.some(e => e.includes('Missing company')) && (
+                          <div style={{ fontSize: '10px', color: '#ef4444', marginTop: '2px' }}>missing company</div>
+                        )}
+                      </div>
+                      <div style={{ alignSelf: 'center' }}>
+                        {r.reason !== 'error' && (
+                          <button
+                            onClick={() => toggleAction(i)}
+                            style={{
+                              fontSize: '10px', padding: '2px 7px', borderRadius: '5px', cursor: 'pointer',
+                              border: '1px solid var(--border-default)', background: 'transparent',
+                              color: isSkip ? 'var(--brand-cyan)' : 'var(--text-muted)',
+                            }}
+                          >
+                            {isSkip ? 'Add' : 'Skip'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={runImport}
+                disabled={importing || (creates + updates === 0)}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Upload size={13} />
+                {importing ? 'Importing…' : `Confirm — ${creates} new · ${updates} updates`}
+              </button>
+              <button className="btn btn-ghost btn-sm" onClick={reset}>Cancel</button>
+            </div>
+          </div>
+        )}
+
+        {/* ── DONE ─────────────────────────────────────────── */}
+        {wizStage === 'done' && result && (
+          <div style={{ textAlign: 'center', padding: '60px 0' }}>
+            <CheckCircle2 size={44} style={{ color: '#22c55e', marginBottom: '16px' }} />
+            <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>
+              Import complete
+            </div>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 2, marginBottom: '28px' }}>
+              {result.created > 0 && <div>{result.created} new lead{result.created !== 1 ? 's' : ''} created</div>}
+              {result.updated > 0 && <div>{result.updated} existing lead{result.updated !== 1 ? 's' : ''} updated</div>}
+              {result.skipped > 0 && <div style={{ color: 'var(--text-muted)' }}>{result.skipped} rows skipped</div>}
+              {result.errors?.length > 0 && (
+                <div style={{ color: '#ef4444', marginTop: '8px' }}>
+                  {result.errors.length} error{result.errors.length !== 1 ? 's' : ''}:
+                  <div style={{ fontSize: '11px', marginTop: '4px' }}>{result.errors.slice(0,3).join('; ')}</div>
+                </div>
+              )}
+            </div>
+            <button className="btn btn-ghost btn-sm" onClick={reset}>Import another file</button>
+          </div>
+        )}
+
       </div>
     </div>
   )
