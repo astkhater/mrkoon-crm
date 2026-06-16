@@ -3,8 +3,10 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useApp }  from '@/contexts/AppContext'
 
 // Layout
-import AppShell from '@/components/layout/AppShell'
-import ToastContainer from '@/components/ui/ToastContainer'
+import AppShell        from '@/components/layout/AppShell'
+import ToastContainer  from '@/components/ui/ToastContainer'
+import ErrorBoundary   from '@/components/ui/ErrorBoundary'
+import BugReportButton from '@/components/ui/BugReportButton'
 
 // Auth screens
 import Login         from '@/pages/auth/Login'
@@ -42,7 +44,6 @@ function RoleHome() {
   return                                                   <Navigate to="/dashboard/bd"        replace />
 }
 
-/** Block non-admin users */
 function AdminRoute({ children }) {
   const { isAdmin, loading } = useAuth()
   if (loading) return <Loading />
@@ -50,14 +51,12 @@ function AdminRoute({ children }) {
   return children
 }
 
-/** Block users without import permission */
 function ImportRoute({ children }) {
   const { canImport } = useAuth()
   if (!canImport) return <Navigate to="/" replace />
   return children
 }
 
-/** Block unauthenticated access */
 function ProtectedRoute({ children }) {
   const { session, loading } = useAuth()
   if (loading) return <Loading />
@@ -65,7 +64,6 @@ function ProtectedRoute({ children }) {
   return children
 }
 
-/** Block authenticated users from seeing login */
 function GuestRoute({ children }) {
   const { session, loading } = useAuth()
   if (loading) return <Loading />
@@ -74,54 +72,49 @@ function GuestRoute({ children }) {
 }
 
 export default function App() {
-  const { toasts, dismissToast } = useApp()
+  const { toasts, dismissToast, session } = useApp()
+  const { session: authSession } = useAuth()
 
   return (
-    <>
+    <ErrorBoundary>
       <Routes>
         {/* Guest routes */}
         <Route path="/login"          element={<GuestRoute><Login /></GuestRoute>} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
-        {/* Protected routes - all wrapped in AppShell */}
+        {/* Protected routes */}
         <Route path="/" element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
           <Route index element={<RoleHome />} />
 
-          {/* Dashboards */}
-          <Route path="dashboard/executive" element={<ExecutiveDashboard />} />
-          <Route path="dashboard/cco"       element={<CCODashboard />} />
-          <Route path="dashboard/bd"        element={<BDDashboard />} />
-          <Route path="dashboard/am"        element={<AMDashboard />} />
+          <Route path="dashboard/executive" element={<ErrorBoundary><ExecutiveDashboard /></ErrorBoundary>} />
+          <Route path="dashboard/cco"       element={<ErrorBoundary><CCODashboard /></ErrorBoundary>} />
+          <Route path="dashboard/bd"        element={<ErrorBoundary><BDDashboard /></ErrorBoundary>} />
+          <Route path="dashboard/am"        element={<ErrorBoundary><AMDashboard /></ErrorBoundary>} />
 
-          {/* Admin */}
-          <Route path="admin"       element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="admin"      element={<AdminRoute><ErrorBoundary><AdminPanel /></ErrorBoundary></AdminRoute>} />
+          <Route path="data-entry" element={<ErrorBoundary><ModeratorDataEntry /></ErrorBoundary>} />
 
-          {/* Moderator */}
-          <Route path="data-entry"  element={<ModeratorDataEntry />} />
-
-          {/* Core pages */}
-          <Route path="pipeline"  element={<Pipeline />} />
-          <Route path="leads"     element={<Leads />} />
-          <Route path="accounts"  element={<Accounts />} />
-          <Route path="reconnect" element={<ReconnectQueue />} />
-          <Route path="calendar"  element={<CalendarPage />} />
-          <Route path="settings"  element={<Settings />} />
-          <Route path="ask-ai"    element={<AskAi />} />
-          <Route path="ai-setup"  element={<AiSetup />} />
-
-          <Route path="merge"  element={<MergePage />} />
-          <Route path="import" element={
-            <ImportRoute><Import /></ImportRoute>
-          } />
+          <Route path="pipeline"  element={<ErrorBoundary><Pipeline /></ErrorBoundary>} />
+          <Route path="leads"     element={<ErrorBoundary><Leads /></ErrorBoundary>} />
+          <Route path="accounts"  element={<ErrorBoundary><Accounts /></ErrorBoundary>} />
+          <Route path="reconnect" element={<ErrorBoundary><ReconnectQueue /></ErrorBoundary>} />
+          <Route path="calendar"  element={<ErrorBoundary><CalendarPage /></ErrorBoundary>} />
+          <Route path="settings"  element={<ErrorBoundary><Settings /></ErrorBoundary>} />
+          <Route path="ask-ai"    element={<ErrorBoundary><AskAi /></ErrorBoundary>} />
+          <Route path="ai-setup"  element={<ErrorBoundary><AiSetup /></ErrorBoundary>} />
+          <Route path="merge"     element={<ErrorBoundary><MergePage /></ErrorBoundary>} />
+          <Route path="import"    element={<ImportRoute><ErrorBoundary><Import /></ErrorBoundary></ImportRoute>} />
 
           <Route path="*" element={<NotFound />} />
         </Route>
 
-        {/* Catch-all */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
-    </>
+
+      {/* Floating bug report button — only shown when logged in */}
+      {authSession && <BugReportButton />}
+    </ErrorBoundary>
   )
 }
