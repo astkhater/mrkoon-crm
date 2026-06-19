@@ -30,7 +30,6 @@ import Settings       from '@/pages/shared/Settings'
 import Import         from '@/pages/shared/Import'
 import AiSetup        from '@/pages/shared/AiSetup'
 import AskAi          from '@/pages/shared/AskAi'
-import MergePage      from '@/pages/shared/MergePage'
 import NotFound       from '@/pages/shared/NotFound'
 import Loading        from '@/pages/shared/Loading'
 
@@ -102,7 +101,6 @@ export default function App() {
           <Route path="settings"  element={<ErrorBoundary><Settings /></ErrorBoundary>} />
           <Route path="ask-ai"    element={<ErrorBoundary><AskAi /></ErrorBoundary>} />
           <Route path="ai-setup"  element={<ErrorBoundary><AiSetup /></ErrorBoundary>} />
-          <Route path="merge"     element={<ErrorBoundary><MergePage /></ErrorBoundary>} />
           <Route path="import"    element={<ImportRoute><ErrorBoundary><Import /></ErrorBoundary></ImportRoute>} />
 
           <Route path="*" element={<NotFound />} />
